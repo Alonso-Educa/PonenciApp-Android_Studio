@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "782692490355",
+    "project_id": "ponenciapp",
+    "storage_bucket": "ponenciapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782692490355:android:336d59140e5a0226efde06",
+        "android_client_info": {
+          "package_name": "com.example.ponenciapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTi6esLaEHtyNvs6Ex7vxWfMYeP5Og9XQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
