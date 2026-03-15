@@ -54,6 +54,7 @@ import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.notification.NotificationHandler
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -62,11 +63,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun Login(navController: NavController) {
 
+    // Variables usadas
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val auth = Firebase.auth
     val firestore = FirebaseFirestore.getInstance()
 
+    // Base de datos de room
     val db = remember {
         Room.databaseBuilder(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
@@ -75,17 +78,18 @@ fun Login(navController: NavController) {
 
     val participanteDao = db.participanteDao()
 
-    // Campos
+    // Campos de texto
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var contrasena by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var estaCargando by remember { mutableStateOf(false) }
     var showDialogRecuperar by remember { mutableStateOf(false) }
 
     val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
     var showDialogRegistro by remember { mutableStateOf(false) }
 
+    // Contenido del login
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -94,7 +98,7 @@ fun Login(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo / título
+        // Logo y título
         Text(
             text = "PonenciApp",
             fontSize = 32.sp,
@@ -124,8 +128,8 @@ fun Login(navController: NavController) {
 
         // Contraseña
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
+            value = contrasena,
+            onValueChange = { contrasena = it },
             label = { Text("Contraseña") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
             trailingIcon = {
@@ -133,8 +137,7 @@ fun Login(navController: NavController) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.VisibilityOff
                         else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Ocultar contraseña"
-                        else "Mostrar contraseña"
+                        contentDescription = "Mostrar/Ocultar contraseña"
                     )
                 }
             },
@@ -152,53 +155,93 @@ fun Login(navController: NavController) {
             onClick = { showDialogRecuperar = true },
             modifier = Modifier.align(Alignment.End)
         ) {
-            Text("¿Olvidaste tu contraseña?")
+            Text("¿Has olvidado tu contraseña?")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón login
+        // Botón de iniciar sesión
         Button(
             onClick = {
                 when {
-                    email.isBlank() -> Toast.makeText(context, "Introduce tu email", Toast.LENGTH_SHORT).show()
-                    !emailPattern.matches(email) -> Toast.makeText(context, "Formato de email inválido", Toast.LENGTH_SHORT).show()
-                    password.isBlank() -> Toast.makeText(context, "Introduce tu contraseña", Toast.LENGTH_SHORT).show()
-                    password.length < 6 -> Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+                    email.isBlank() -> Toast.makeText(
+                        context,
+                        "Introduce tu email",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    !emailPattern.matches(email) -> Toast.makeText(
+                        context,
+                        "Formato de email inválido",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    contrasena.isBlank() -> Toast.makeText(
+                        context,
+                        "Introduce tu contraseña",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    contrasena.length < 6 -> Toast.makeText(
+                        context,
+                        "La contraseña debe tener al menos 6 caracteres",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     else -> {
-                        isLoading = true
-                        auth.signInWithEmailAndPassword(email, password)
+                        estaCargando = true
+                        auth.signInWithEmailAndPassword(email, contrasena)
                             .addOnSuccessListener { result ->
                                 val uid = result.user?.uid ?: ""
                                 firestore.collection("participantes").document(uid).get()
                                     .addOnSuccessListener { doc ->
+                                        if (!doc.exists()) {
+                                            estaCargando = false
+                                            Toast.makeText(
+                                                context,
+                                                "No se encontraron datos del usuario",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            return@addOnSuccessListener
+                                        }
                                         scope.launch {
                                             participanteDao.insertar(
-                                                com.example.ponenciapp.data.bbdd.entities.ParticipanteData(
+                                                ParticipanteData(
                                                     idParticipante = uid,
                                                     nombre = doc.getString("nombre") ?: "",
                                                     apellidos = doc.getString("apellidos") ?: "",
                                                     emailEduca = doc.getString("emailEduca") ?: "",
                                                     centro = doc.getString("centro") ?: "",
-                                                    codigoCentro = doc.getString("codigoCentro") ?: "",
+                                                    codigoCentro = doc.getString("codigoCentro")
+                                                        ?: "",
                                                     rol = doc.getString("rol") ?: "participante",
-                                                    fechaRegistro = doc.getString("fechaRegistro") ?: ""
+                                                    fechaRegistro = doc.getString("fechaRegistro")
+                                                        ?: "",
+                                                    idEvento = doc.getString("idEvento") ?: ""
                                                 )
                                             )
-                                            isLoading = false
+                                            estaCargando = false
                                             navController.navigate(AppScreens.PantallaPrincipal.route) {
                                                 popUpTo(0) { inclusive = true }
                                             }
                                         }
                                     }
-                                    .addOnFailureListener {
-                                        isLoading = false
-                                        Toast.makeText(context, "Error obteniendo datos del usuario", Toast.LENGTH_SHORT).show()
+                                    .addOnFailureListener { e ->
+                                        estaCargando = false
+                                        Toast.makeText(
+                                            context,
+                                            "Error obteniendo datos del usuario: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                             }
                             .addOnFailureListener {
-                                isLoading = false
-                                Toast.makeText(context, "Email o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+                                estaCargando = false
+                                Toast.makeText(
+                                    context,
+                                    "Email o contraseña incorrectos",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                     }
                 }
@@ -206,9 +249,10 @@ fun Login(navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            enabled = !isLoading
+            enabled = !estaCargando
         ) {
-            if (isLoading) {
+            // Si está cargando muestra un iconito de carga
+            if (estaCargando) {
                 CircularProgressIndicator(
                     color = Color.White,
                     modifier = Modifier.size(24.dp)
@@ -219,9 +263,11 @@ fun Login(navController: NavController) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Botón de registrarse. quizá se quite más adelante
         HorizontalDivider()
         Text(
-            "Solo disponible en debug, versión inicial",
+            "Si no tienes una cuenta, regístrate aquí",
             fontSize = 12.sp,
             color = Color.Gray,
             modifier = Modifier.padding(vertical = 8.dp)
@@ -230,11 +276,11 @@ fun Login(navController: NavController) {
             onClick = { showDialogRegistro = true },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Crear cuenta (Debug)")
+            Text("Registrarse")
         }
     }
 
-    // Dialog recuperar contraseña
+    // Dialog de recuperar contraseña
     if (showDialogRecuperar) {
         DialogRecuperarContrasena(
             onDismiss = { showDialogRecuperar = false }
@@ -242,12 +288,13 @@ fun Login(navController: NavController) {
     }
 
 
-// Al final, fuera del Column
+    // Muestra el dialog de registro
     if (showDialogRegistro) {
-        DialogRegistroDebug(onDismiss = { showDialogRegistro = false })
+        DialogRegistro(onDismiss = { showDialogRegistro = false })
     }
 }
 
+// Función para mostrar el dialog de recuperar contraseña
 @Composable
 fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -293,16 +340,34 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
                     }
                     Button(onClick = {
                         when {
-                            emailRecuperar.isBlank() -> Toast.makeText(context, "Introduce tu email", Toast.LENGTH_SHORT).show()
-                            !emailPattern.matches(emailRecuperar) -> Toast.makeText(context, "Formato de email inválido", Toast.LENGTH_SHORT).show()
+                            emailRecuperar.isBlank() -> Toast.makeText(
+                                context,
+                                "Introduce tu email",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            !emailPattern.matches(emailRecuperar) -> Toast.makeText(
+                                context,
+                                "Formato de email inválido",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             else -> {
                                 auth.sendPasswordResetEmail(emailRecuperar)
                                     .addOnSuccessListener {
-                                        Toast.makeText(context, "Email de recuperación enviado", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Email de recuperación enviado",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                         onDismiss()
                                     }
                                     .addOnFailureListener {
-                                        Toast.makeText(context, "Error enviando el email", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Error enviando el email",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                             }
                         }
@@ -315,8 +380,9 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
     }
 }
 
+// Función para mostrar el dialog de registro
 @Composable
-fun DialogRegistroDebug(
+fun DialogRegistro(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -338,9 +404,10 @@ fun DialogRegistroDebug(
     var codigoCentro by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
     var isLoading by remember { mutableStateOf(false) }
 
-    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    val notificationHandler = NotificationHandler(context)
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -356,7 +423,7 @@ fun DialogRegistroDebug(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Registro Debug",
+                    "Registra tu cuenta",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -422,13 +489,48 @@ fun DialogRegistroDebug(
                     Button(
                         onClick = {
                             when {
-                                nombre.isBlank() -> Toast.makeText(context, "Introduce el nombre", Toast.LENGTH_SHORT).show()
-                                apellidos.isBlank() -> Toast.makeText(context, "Introduce los apellidos", Toast.LENGTH_SHORT).show()
-                                emailEduca.isBlank() -> Toast.makeText(context, "Introduce el email", Toast.LENGTH_SHORT).show()
-                                !emailPattern.matches(emailEduca) -> Toast.makeText(context, "Formato de email inválido", Toast.LENGTH_SHORT).show()
-                                centro.isBlank() -> Toast.makeText(context, "Introduce el centro", Toast.LENGTH_SHORT).show()
-                                codigoCentro.isBlank() -> Toast.makeText(context, "Introduce el código de centro", Toast.LENGTH_SHORT).show()
-                                password.length < 6 -> Toast.makeText(context, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+                                nombre.isBlank() -> Toast.makeText(
+                                    context,
+                                    "Introduce el nombre",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                apellidos.isBlank() -> Toast.makeText(
+                                    context,
+                                    "Introduce los apellidos",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                emailEduca.isBlank() -> Toast.makeText(
+                                    context,
+                                    "Introduce el email",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                !emailPattern.matches(emailEduca) -> Toast.makeText(
+                                    context,
+                                    "Formato de email inválido",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                centro.isBlank() -> Toast.makeText(
+                                    context,
+                                    "Introduce el centro",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                codigoCentro.isBlank() -> Toast.makeText(
+                                    context,
+                                    "Introduce el código de centro",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
+                                password.length < 6 -> Toast.makeText(
+                                    context,
+                                    "La contraseña debe tener al menos 6 caracteres",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+
                                 else -> {
                                     isLoading = true
                                     auth.createUserWithEmailAndPassword(emailEduca, password)
@@ -441,7 +543,8 @@ fun DialogRegistroDebug(
                                                 "centro" to centro,
                                                 "codigoCentro" to codigoCentro,
                                                 "rol" to "participante",
-                                                "fechaRegistro" to System.currentTimeMillis().toString()
+                                                "fechaRegistro" to System.currentTimeMillis()
+                                                    .toString()
                                             )
                                             firestore.collection("participantes").document(uid)
                                                 .set(data)
@@ -456,26 +559,43 @@ fun DialogRegistroDebug(
                                                                 centro = centro,
                                                                 codigoCentro = codigoCentro,
                                                                 rol = "participante",
-                                                                fechaRegistro = System.currentTimeMillis().toString()
+                                                                fechaRegistro = System.currentTimeMillis()
+                                                                    .toString()
                                                             )
                                                         )
                                                         isLoading = false
-                                                        Toast.makeText(context, "Cuenta creada correctamente", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Cuenta creada correctamente",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
                                                         onDismiss()
-                                                        // ✅ Cerrar sesión tras registrar para que el usuario haga login manualmente
+                                                        // Cerrar sesión tras registrar para que el usuario haga login manualmente
                                                         auth.signOut()
+                                                        notificationHandler.enviarNotificacionSimple(
+                                                            "Registro exitoso",
+                                                            "Bienvenido $nombre"
+                                                        )
                                                     }
                                                 }
                                                 .addOnFailureListener { e ->
                                                     isLoading = false
-                                                    // ✅ Si falla Firestore, eliminar la cuenta de Auth para no dejar datos huérfanos
+                                                    // Si falla Firestore, eliminar la cuenta de Auth para no dejar datos huérfanos
                                                     auth.currentUser?.delete()
-                                                    Toast.makeText(context, "Error guardando datos: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Error guardando datos: ${e.message}",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                 }
                                         }
                                         .addOnFailureListener { e ->
                                             isLoading = false
-                                            Toast.makeText(context, "Error creando cuenta: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Error creando cuenta: ${e.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                 }
                             }

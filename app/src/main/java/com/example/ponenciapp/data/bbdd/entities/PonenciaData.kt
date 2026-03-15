@@ -12,5 +12,6 @@ data class PonenciaData(
     val horaInicio: String,
     val horaFin: String,
     val qrCode: String = "",
-    val idEvento: String
+    val idEvento: String,
+    val orden: Int = 0
 )

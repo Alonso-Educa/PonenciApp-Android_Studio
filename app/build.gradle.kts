@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp") version "2.0.21-1.0.28"
     alias(libs.plugins.google.gms.google.services)
-    //alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -69,10 +68,24 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
+    // Para abrir la cámara
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    implementation("com.google.guava:guava:32.0.1-android")
+
+    // Para leer QR
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    // Generar QR
+    implementation("com.google.zxing:core:3.5.2")
+    implementation("androidx.compose.ui:ui-graphics:1.6.0")
+
     // ---------------- ROOM ----------------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    implementation(libs.firebase.firestore)
+
     //implementation(libs.androidx.material3)
     ksp("androidx.room:room-compiler:2.6.1")
 
@@ -81,7 +94,8 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-common-ktx")
     implementation("com.google.firebase:firebase-auth")
-
+    implementation(libs.firebase.firestore)
+    
     // ---------------- CORE ----------------
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")

@@ -22,4 +22,8 @@ interface PonenciaDao {
 
     @Query("DELETE FROM ponencia WHERE idEvento = :idEvento")
     suspend fun eliminarPonenciasDeEvento(idEvento: String)
+
+    @Query("DELETE FROM ponencia WHERE idPonencia = :id")
+    suspend fun eliminarPonencia(id: String)
+
 }

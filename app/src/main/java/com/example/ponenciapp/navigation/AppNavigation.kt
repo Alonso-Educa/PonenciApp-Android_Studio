@@ -5,11 +5,16 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.ponenciapp.screens.Login
 import com.example.ponenciapp.screens.PantallaPrincipal
+import com.example.ponenciapp.screens.comun.UnirseEvento
+import com.example.ponenciapp.screens.organizador.DetalleEvento
+import com.example.ponenciapp.screens.participante.DetallePonencia
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -18,6 +23,7 @@ fun AppNavigation(destinoNotificacion: String? = null) {
     val context = LocalContext.current
     val auth = Firebase.auth
 
+    // Comprueba si hay una sesión iniciada y define la pantalla de inicio
     val startDestination = if (auth.currentUser != null) {
         AppScreens.PantallaPrincipal.route
     } else {
@@ -26,6 +32,7 @@ fun AppNavigation(destinoNotificacion: String? = null) {
 
     val navController = rememberNavController()
 
+    // Navega a la pantalla de destino
     LaunchedEffect(destinoNotificacion) {
         if (destinoNotificacion != null && AppScreens.fromRoute(destinoNotificacion) != null) {
             navController.navigate(destinoNotificacion) {
@@ -50,6 +57,23 @@ fun AppNavigation(destinoNotificacion: String? = null) {
                 ).show()
             }
             PantallaPrincipal(navController)
+        }
+        composable(AppScreens.UnirseEvento.route) {
+            UnirseEvento(navController)
+        }
+        composable(
+            route = AppScreens.DetalleEvento.route,
+            arguments = listOf(navArgument("idEvento") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val idEvento = backStackEntry.arguments?.getString("idEvento") ?: ""
+            DetalleEvento(navController, idEvento)
+        }
+        composable(
+            route = AppScreens.DetallePonencia.route,
+            arguments = listOf(navArgument("idPonencia") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val idPonencia = backStackEntry.arguments?.getString("idPonencia") ?: ""
+            DetallePonencia(navController, idPonencia)
         }
     }
 }

@@ -16,4 +16,7 @@ interface EventoDao {
 
     @Query("SELECT * FROM evento")
     suspend fun getTodosEventos(): List<EventoData>
+
+    @Query("DELETE FROM evento WHERE idEvento = :id")
+    suspend fun eliminar(id: String)
 }

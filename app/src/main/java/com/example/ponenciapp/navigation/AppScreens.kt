@@ -1,24 +1,34 @@
 package com.example.ponenciapp.navigation
 
 sealed class AppScreens(val route: String) {
-    object Login : AppScreens("login")
-    object PantallaPrincipal : AppScreens("pantalla_principal")
-    object CheckInQR : AppScreens("checkin_qr")
-    object AsistenciaQR : AppScreens("asistencia_qr/{idPonencia}") {
-        fun createRoute(idPonencia: String) = "asistencia_qr/$idPonencia"
+    object Login : AppScreens("Login")
+    object PantallaPrincipal : AppScreens("PantallaPrincipal")
+    object UnirseEvento : AppScreens("UnirseEvento")
+    object CheckInQR : AppScreens("CheckInQR")
+    object Ponencias : AppScreens("Ponencias")
+    object Valoracion : AppScreens("Valoracion")
+    object Ajustes : AppScreens("Ajustes")
+    object MisEventos : AppScreens("MisEventos")
+    object DetalleEvento : AppScreens("DetalleEvento/{idEvento}") {
+        fun createRoute(idEvento: String) = "DetalleEvento/$idEvento"
     }
-    object Ponencias : AppScreens("ponencias")
-    object DetallePonencia : AppScreens("detalle_ponencia/{idPonencia}") {
-        fun createRoute(idPonencia: String) = "detalle_ponencia/$idPonencia"
+    object DetallePonencia : AppScreens("DetallePonencia/{idPonencia}") {
+        fun createRoute(idPonencia: String) = "DetallePonencia/$idPonencia"
     }
-    object Valoracion : AppScreens("valoracion")
-    object Ajustes : AppScreens("ajustes")
 
     companion object {
         fun fromRoute(route: String): AppScreens? {
             return when (route.substringBefore("/")) {
-                "login" -> Login
-                "pantalla_principal" -> PantallaPrincipal
+                "Login" -> Login
+                "PantallaPrincipal" -> PantallaPrincipal
+                "UnirseEvento" -> UnirseEvento
+                "CheckInQR" -> CheckInQR
+                "Ponencias" -> Ponencias
+                "Valoracion" -> Valoracion
+                "Ajustes" -> Ajustes
+                "MisEventos" -> MisEventos
+                "DetalleEvento" -> DetalleEvento
+                "DetallePonencia" -> DetallePonencia
                 else -> null
             }
         }

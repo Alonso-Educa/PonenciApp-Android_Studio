@@ -1,0 +1,449 @@
+package com.example.ponenciapp.screens.participante
+
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.room.Room
+import com.example.ponenciapp.data.Estructura
+import com.example.ponenciapp.data.bbdd.AppDB
+import com.example.ponenciapp.data.bbdd.entities.EventoData
+import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.navigation.AppScreens
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetallePonencia(navController: NavController, idPonencia: String) {
+
+    // variables de estado
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val firestore = FirebaseFirestore.getInstance()
+    val uid = Firebase.auth.currentUser?.uid ?: ""
+    val auth = Firebase.auth
+
+    // base de datos de room
+    val db = remember {
+        Room.databaseBuilder(
+            context.applicationContext, AppDB::class.java, Estructura.DB.NAME
+        ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
+    }
+
+    // daos de room
+    val ponenciaDao = db.ponenciaDao()
+    val participanteDao = db.participanteDao()
+
+    var ponencia by remember { mutableStateOf<PonenciaData?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var evento by remember { mutableStateOf<EventoData?>(null) }
+
+    LaunchedEffect(Unit) {
+        // carga el participante desde room
+        participante = participanteDao.getParticipantePorId(uid)
+
+        // Carga sus ponencias desde firebase
+        firestore.collection("ponencias").document(idPonencia).get()
+            .addOnSuccessListener { doc ->
+                ponencia = PonenciaData(
+                    idPonencia = doc.id,
+                    titulo = doc.getString("titulo") ?: "",
+                    ponente = doc.getString("ponente") ?: "",
+                    descripcion = doc.getString("descripcion") ?: "",
+                    horaInicio = doc.getString("horaInicio") ?: "",
+                    horaFin = doc.getString("horaFin") ?: "",
+                    qrCode = doc.getString("qrCode") ?: "",
+                    idEvento = doc.getString("idEvento") ?: "",
+                    orden = doc.getLong("orden")?.toInt() ?: 0
+                )
+
+                // Carga el evento desde firebase
+                val idEvento = doc.getString("idEvento") ?: ""
+                if (idEvento.isNotEmpty()) {
+                    firestore.collection("eventos").document(idEvento).get()
+                        .addOnSuccessListener { eventoDoc ->
+                            evento = EventoData(
+                                idEvento = eventoDoc.id,
+                                nombre = eventoDoc.getString("nombre") ?: "",
+                                fecha = eventoDoc.getString("fecha") ?: "",
+                                lugar = eventoDoc.getString("lugar") ?: "",
+                                descripcion = eventoDoc.getString("descripcion") ?: "",
+                                contrasena = eventoDoc.getString("contrasena") ?: "",
+                                codigoEvento = eventoDoc.getString("codigoEvento") ?: ""
+                            )
+                        }
+                }
+
+                scope.launch {
+                    ponencia?.let { ponenciaDao.insertar(it) }
+                    isLoading = false
+                }
+            }
+            // Si firebase falla se cargan los datos desde room
+            .addOnFailureListener {
+                scope.launch {
+                    ponencia = ponenciaDao.getPonenciaPorId(idPonencia)
+                    if (ponencia == null) {
+                        Toast.makeText(context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT).show()
+                    }
+                    isLoading = false
+                }
+            }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = ponencia?.titulo ?: "Detalle",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
+                        //modifier = Modifier.padding(end = 48.dp)
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ),
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Atrás",
+                            tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    // Botón cerrar sesión
+                    IconButton(onClick = {
+                        scope.launch {
+                            auth.signOut()
+                            navController.navigate(AppScreens.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = "Cerrar sesión",
+                            tint = Color.White
+                        )
+                    }
+                    // Icono de usuario
+                    participante?.let { usuario ->
+                        var showCardDialog by remember { mutableStateOf(false) }
+                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
+                                .clickable { showCardDialog = true }
+                        ) {
+                            Text(
+                                modifier = Modifier.align(Alignment.Center),
+                                text = inicial,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                        }
+
+                        if (showCardDialog) {
+                            Dialog(onDismissRequest = { showCardDialog = false }) {
+                                Card(
+                                    shape = MaterialTheme.shapes.large,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(8.dp),
+                                    modifier = Modifier.padding(10.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(16.dp)
+                                                .widthIn(min = 200.dp, max = 300.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(60.dp)
+                                                    .background(
+                                                        MaterialTheme.colorScheme.tertiary,
+                                                        CircleShape
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        MaterialTheme.colorScheme.secondary,
+                                                        CircleShape
+                                                    )
+                                            ) {
+                                                Text(
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                    text = inicial,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = Color.White
+                                                )
+                                            }
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Text(
+                                                    "${usuario.nombre} ${usuario.apellidos}",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    "Email: ${usuario.emailEduca}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Centro: ${usuario.centro}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+                                        }
+                                        Button(
+                                            modifier = Modifier.padding(bottom = 16.dp),
+                                            onClick = { showCardDialog = false }
+                                        ) {
+                                            Text("Cerrar")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    ) { padding ->
+
+        // Si está cargando muestra el iconito de carga
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        // Muestra la información de la ponencia
+        ponencia?.let { p ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Cabecera con número de orden
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            "Ponencia ${p.orden}",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Título
+                Text(
+                    p.titulo,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Ponente
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        p.ponente,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Horario de la ponencia
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Horario",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                "${p.horaInicio} - ${p.horaFin}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CalendarMonth,
+                                    contentDescription = "Fecha",
+                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                )
+                                Text(
+                                    evento?.fecha ?: "",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = "Fecha",
+                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                )
+                                Text(
+                                    evento?.lugar ?: "",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Descripción
+                if (p.descripcion.isNotBlank()) {
+                    Text(
+                        "Descripción",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        p.descripcion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+
+                HorizontalDivider()
+
+                // Botón QR asistencia — por implementar
+                Button(
+                    onClick = {
+                        // TODO: implementar el escaner de cada ponencia individual
+                        Toast.makeText(
+                            context,
+                            "Escáner QR aún no implementado",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Registrar asistencia a esta ponencia")
+                }
+            }
+        }
+    }
+}

@@ -1,36 +1,42 @@
 package com.example.ponenciapp.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -45,29 +51,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.room.Room
-import com.composables.icons.lucide.Lucide
-import com.composables.icons.lucide.User
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
+import com.example.ponenciapp.data.bbdd.entities.EventoData
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.navigation.BottomNavItem
+import com.example.ponenciapp.screens.comun.Ajustes
+import com.example.ponenciapp.screens.organizador.MisEventos
+import com.example.ponenciapp.screens.participante.CheckInQR
+import com.example.ponenciapp.screens.participante.Ponencias
+import com.example.ponenciapp.screens.participante.Valoracion
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaPrincipal(navController: NavController) {
 
+    // Variables y funciones
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val auth = Firebase.auth
+    val uid = Firebase.auth.currentUser?.uid ?: ""
 
+    // Base de dtaos de room
     val db = remember {
         Room.databaseBuilder(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
@@ -77,19 +94,50 @@ fun PantallaPrincipal(navController: NavController) {
     val participanteDao = db.participanteDao()
 
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
-    var seccionActual by remember { mutableStateOf(AppScreens.CheckInQR.route) }
-    val uid = Firebase.auth.currentUser?.uid ?: ""
+    var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
+        // Carga el participante desde Room
         participante = participanteDao.getParticipantePorId(uid)
+        // Si no tiene evento asignado y no es organizador le redirige a UnirseEvento
+        if (participante?.idEvento.isNullOrEmpty() && participante?.rol != "organizador") {
+            navController.navigate(AppScreens.UnirseEvento.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+        isLoading = false
     }
 
-    val bottomNavItems = listOf(
-        BottomNavItem("Check-in", Icons.Default.QrCodeScanner, AppScreens.CheckInQR.route),
-        BottomNavItem("Ponencias", Icons.Default.EventNote, AppScreens.Ponencias.route),
-        BottomNavItem("Valoración", Icons.Default.Star, AppScreens.Valoracion.route),
-        BottomNavItem("Ajustes", Icons.Default.Settings, AppScreens.Ajustes.route)
-    )
+    // Si está cargando los datos muestra un iconito de carga
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    // BottomBar diferente según el rol del usuario (participante u organizador)
+    // Cuando se implemente el organizador en flutter quizá se quite de aquí
+    val bottomNavItems = when {
+        // Si es organizador solo ve Mis Eventos y Ajustes
+        participante?.rol == "organizador" -> listOf(
+            BottomNavItem("Mis Eventos", Icons.Default.Event, AppScreens.MisEventos.route),
+            BottomNavItem("Ajustes", Icons.Default.Settings, AppScreens.Ajustes.route)
+        )
+
+        // Si es participante ve todas las secciones
+        else -> listOf(
+            BottomNavItem("Check-in", Icons.Default.QrCodeScanner, AppScreens.CheckInQR.route),
+            BottomNavItem("Ponencias", Icons.Default.EventNote, AppScreens.Ponencias.route),
+            BottomNavItem("Valoración", Icons.Default.Star, AppScreens.Valoracion.route),
+            BottomNavItem("Ajustes", Icons.Default.Settings, AppScreens.Ajustes.route)
+        )
+    }
+
+    // La sección que se muestra al entrar es la primera del BottomBar
+    var seccionActual by remember {
+        mutableStateOf(bottomNavItems.first().route)
+    }
 
     Scaffold(
         topBar = {
@@ -97,6 +145,7 @@ fun PantallaPrincipal(navController: NavController) {
                 title = {
                     Column {
                         Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        // Nombre del participante debajo del título
                         participante?.let {
                             Text(
                                 "${it.nombre} ${it.apellidos}",
@@ -111,18 +160,7 @@ fun PantallaPrincipal(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    // Icono de usuario
-                    IconButton(onClick = {
-                        // aún por hacer TODO()
-                        Toast.makeText(context, "Icono de usuario", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Icon(
-                            Lucide.User,
-                            contentDescription = "Icono de usuario",
-                            tint = Color.White
-                        )
-                    }
-                    // Cerrar sesión
+                    // Botón cerrar sesión
                     IconButton(onClick = {
                         scope.launch {
                             auth.signOut()
@@ -137,9 +175,103 @@ fun PantallaPrincipal(navController: NavController) {
                             tint = Color.White
                         )
                     }
+                    // Icono circular con la inicial del usuario
+                    // Al pulsar muestra un dialog con los datos del participante
+                    participante?.let { usuario ->
+                        var showCardDialog by remember { mutableStateOf(false) }
+                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
+                                .clickable { showCardDialog = true }
+                        ) {
+                            Text(
+                                modifier = Modifier.align(Alignment.Center),
+                                text = inicial,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                        }
+
+                        // Dialog con los datos del participante
+                        if (showCardDialog) {
+                            Dialog(onDismissRequest = { showCardDialog = false }) {
+                                Card(
+                                    shape = MaterialTheme.shapes.large,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(8.dp),
+                                    modifier = Modifier.padding(10.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(16.dp)
+                                                .widthIn(min = 200.dp, max = 300.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(60.dp)
+                                                    .background(
+                                                        MaterialTheme.colorScheme.tertiary,
+                                                        CircleShape
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        MaterialTheme.colorScheme.secondary,
+                                                        CircleShape
+                                                    )
+                                            ) {
+                                                Text(
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                    text = inicial,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = Color.White
+                                                )
+                                            }
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Text(
+                                                    "${usuario.nombre} ${usuario.apellidos}",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    "Email: ${usuario.emailEduca}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Centro: ${usuario.centro} - ${usuario.codigoCentro}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Rol: ${usuario.rol}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
+                                        }
+                                        Button(
+                                            modifier = Modifier.padding(bottom = 16.dp),
+                                            onClick = { showCardDialog = false }
+                                        ) {
+                                            Text("Cerrar")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             )
         },
+        // BottomBar con las pantallas según el rol
         bottomBar = {
             NavigationBar {
                 bottomNavItems.forEach { item ->
@@ -160,13 +292,28 @@ fun PantallaPrincipal(navController: NavController) {
             }
         }
     ) { padding ->
+        // Contenido central que cambia según la sección seleccionada en el BottomBar
+        // Mismo formato que la carga de widgets en flutter
         Box(modifier = Modifier.padding(padding)) {
             when (seccionActual) {
-//                AppScreens.PantallaPrincipal.route -> PantallaPrincipal(navController)
-                AppScreens.CheckInQR.route -> SeccionCheckInQR()
-                AppScreens.Ponencias.route -> SeccionPonencias()
-                AppScreens.Valoracion.route -> SeccionValoracion()
-                AppScreens.Ajustes.route -> SeccionAjustes(
+                // Organizador
+                AppScreens.MisEventos.route -> MisEventos(navController)
+
+                // Participante
+                AppScreens.CheckInQR.route -> CheckInQR(
+                    idEvento = participante?.idEvento ?: "",
+                    idParticipante = uid
+                )
+                AppScreens.Ponencias.route -> Ponencias(
+                    navController = navController,
+                    idEvento = participante?.idEvento ?: ""
+                )
+                AppScreens.Valoracion.route -> Valoracion(
+                    idEvento = participante?.idEvento ?: "",
+                    idParticipante = uid
+                )
+                // Compartido por ambos
+                AppScreens.Ajustes.route -> Ajustes(
                     participante = participante,
                     onCerrarSesion = {
                         scope.launch {
@@ -182,117 +329,161 @@ fun PantallaPrincipal(navController: NavController) {
     }
 }
 
-// Secciones placeholder — se irán desarrollando
 @Composable
-fun SeccionCheckInQR() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.QrCodeScanner,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Check-in QR", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Próximamente",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-    }
-}
+fun SeccionUnirseEvento(onUnido: () -> Unit) {
 
-@Composable
-fun SeccionPonencias() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.EventNote,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Ponencias", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Próximamente",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-    }
-}
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val firestore = FirebaseFirestore.getInstance()
+    val uid = Firebase.auth.currentUser?.uid ?: ""
 
-@Composable
-fun SeccionValoracion() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.Star,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Valoración", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Próximamente",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
+    val db = remember {
+        Room.databaseBuilder(
+            context.applicationContext, AppDB::class.java, Estructura.DB.NAME
+        ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-}
 
-@Composable
-fun SeccionAjustes(
-    participante: ParticipanteData?,
-    onCerrarSesion: () -> Unit
-) {
+    val participanteDao = db.participanteDao()
+    val eventoDao = db.eventoDao()
+
+    var codigoEvento by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            Icons.Default.Event,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            "Ajustes",
-            style = MaterialTheme.typography.titleLarge,
+            "Unirse a un evento",
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
 
-        // Datos del participante
-        participante?.let {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Mi perfil", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("${it.nombre} ${it.apellidos}")
-                    Text(it.emailEduca, color = Color.Gray)
-                    Text(it.centro, color = Color.Gray)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "Introduce el código que te ha proporcionado el organizador del evento",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = codigoEvento,
+            onValueChange = { codigoEvento = it.uppercase() },
+            label = { Text("Código del evento") },
+            placeholder = { Text("Ej: FORM-X7K2") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                when {
+                    codigoEvento.isBlank() -> Toast.makeText(
+                        context, "Introduce el código del evento", Toast.LENGTH_SHORT
+                    ).show()
+
+                    else -> {
+                        isLoading = true
+                        firestore.collection("eventos")
+                            .whereEqualTo("codigoEvento", codigoEvento)
+                            .get()
+                            .addOnSuccessListener { result ->
+                                if (result.isEmpty) {
+                                    isLoading = false
+                                    Toast.makeText(
+                                        context,
+                                        "Código de evento no encontrado",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    val doc = result.documents.first()
+                                    val idEvento = doc.id
+                                    scope.launch {
+                                        eventoDao.insertar(
+                                            EventoData(
+                                                idEvento = idEvento,
+                                                nombre = doc.getString("nombre") ?: "",
+                                                fecha = doc.getString("fecha") ?: "",
+                                                lugar = doc.getString("lugar") ?: "",
+                                                descripcion = doc.getString("descripcion") ?: "",
+                                                contrasena = doc.getString("contrasena") ?: "",
+                                                codigoEvento = doc.getString("codigoEvento") ?: ""
+                                            )
+                                        )
+                                        val participanteActual =
+                                            participanteDao.getParticipantePorId(uid)
+                                        participanteActual?.let {
+                                            participanteDao.actualizar(it.copy(idEvento = idEvento))
+                                        }
+                                        firestore.collection("participantes").document(uid)
+                                            .set(
+                                                mapOf("idEvento" to idEvento),
+                                                com.google.firebase.firestore.SetOptions.merge()
+                                            )
+                                        firestore.collection("eventos").document(idEvento)
+                                            .set(
+                                                mapOf("participantes" to FieldValue.arrayUnion(uid)),
+                                                com.google.firebase.firestore.SetOptions.merge()
+                                            )
+                                            .addOnSuccessListener {
+                                                isLoading = false
+                                                Toast.makeText(
+                                                    context,
+                                                    "Te has unido al evento correctamente",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                onUnido() // ← notifica a PantallaPrincipal
+                                            }
+                                            .addOnFailureListener { e ->
+                                                isLoading = false
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error al unirse: ${e.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                    }
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                isLoading = false
+                                Toast.makeText(
+                                    context,
+                                    "Error buscando el evento: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                    }
                 }
-            }
-        }
-
-        HorizontalDivider()
-
-        // Cerrar sesión
-        TextButton(
-            onClick = onCerrarSesion,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.error
-            )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            enabled = !isLoading
         ) {
-            Icon(Icons.Default.Logout, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Cerrar sesión")
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Unirse al evento", fontSize = 16.sp)
+            }
         }
     }
 }

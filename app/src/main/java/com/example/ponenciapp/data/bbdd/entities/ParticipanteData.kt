@@ -12,5 +12,6 @@ data class ParticipanteData(
     val centro: String,
     val codigoCentro: String,
     val rol: String = "participante", // "participante" | "organizador" | "ponente"
-    val fechaRegistro: String = ""
+    val fechaRegistro: String = "",
+    val idEvento: String = ""
 )
