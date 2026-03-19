@@ -19,4 +19,7 @@ interface AsistenciaDao {
 
     @Query("SELECT * FROM asistencia WHERE idParticipante = :idParticipante AND idPonencia = :idPonencia LIMIT 1")
     suspend fun getAsistenciaAPonencia(idParticipante: String, idPonencia: String): AsistenciaData?
+
+    @Query("SELECT * FROM asistencia WHERE idEvento = :idEvento")
+    suspend fun getAsistenciasDeEvento(idEvento: String): List<AsistenciaData>
 }

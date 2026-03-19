@@ -8,6 +8,7 @@ data class AsistenciaData(
     @PrimaryKey val idAsistencia: String,
     val idParticipante: String,
     val idPonencia: String = "", // vacío si tipo = "checkin"
+    val idEvento: String,
     val tipo: String,            // "checkin" | "ponencia"
     val fechaHora: String
 )

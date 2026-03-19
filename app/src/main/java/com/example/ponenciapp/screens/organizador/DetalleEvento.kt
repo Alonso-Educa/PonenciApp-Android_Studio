@@ -40,6 +40,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +74,8 @@ import androidx.navigation.NavController
 import androidx.room.Room
 import com.composables.icons.lucide.CalendarDays
 import com.composables.icons.lucide.Clock
+import com.composables.icons.lucide.File
+import com.composables.icons.lucide.FileSpreadsheet
 import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
@@ -81,6 +84,8 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.data.generarQRBitmap
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.screens.comun.exportarAsistenciasExcel
+import com.example.ponenciapp.screens.comun.exportarAsistenciasPdf
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -382,7 +387,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                     .padding(end = 12.dp)
                             ) {
                                 // Fecha del evento
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         Lucide.CalendarDays,
                                         contentDescription = "Fecha",
@@ -394,7 +399,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                     )
                                 }
                                 // Lugar del evento
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         Icons.Default.LocationOn,
                                         contentDescription = "Lugar",
@@ -452,6 +457,45 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                             Icon(Icons.Default.QrCode, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Ver QR de Check-in")
+                        }
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Botón para generar el documento excel de asistencia
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        exportarAsistenciasExcel(
+                                            context,
+                                            evento?.idEvento ?: ""
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                            ) {
+                                Icon(Lucide.FileSpreadsheet, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Exportar Excel de Asistencias")
+                            }
+                            // Botón para generar el documento pdf de asistencia
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        exportarAsistenciasPdf(
+                                            context,
+                                            evento?.idEvento ?: ""
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                            ) {
+                                Icon(Lucide.File, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Exportar Excel de Asistencias")
+                            }
                         }
                     }
                 }
@@ -535,7 +579,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.Gray
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically){
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
                                             Lucide.Clock,
                                             contentDescription = "Hora",

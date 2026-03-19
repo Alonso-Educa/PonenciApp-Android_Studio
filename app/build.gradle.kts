@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ponenciapp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -53,13 +53,12 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.navigation:navigation-compose:2.9.5")
+    //implementation(libs.androidx.material3)
 
-    // Icons
+    // Iconos / Imágenes
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.composables:icons-lucide:1.0.0")
-
-    // Coil (imágenes)
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-compose:2.7.0") // AsyncImages
 
     // Accompanist
     implementation("com.google.accompanist:accompanist-permissions:0.31.1-alpha")
@@ -82,11 +81,13 @@ dependencies {
     implementation("com.google.zxing:core:3.5.2")
     implementation("androidx.compose.ui:ui-graphics:1.6.0")
 
+    // Generar documentos
+    implementation("org.apache.poi:poi:5.2.0")
+    implementation("org.apache.poi:poi-ooxml:5.2.0")
+
     // ---------------- ROOM ----------------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-
-    //implementation(libs.androidx.material3)
     ksp("androidx.room:room-compiler:2.6.1")
 
     // ---------------- FIREBASE  ----------------

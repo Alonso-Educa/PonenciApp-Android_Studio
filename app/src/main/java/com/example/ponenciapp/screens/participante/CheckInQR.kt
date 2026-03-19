@@ -40,6 +40,9 @@ import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
 import com.example.ponenciapp.screens.comun.EscanerQR
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun CheckInQR(idEvento: String, idParticipante: String) {
@@ -103,7 +106,7 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                             "idEvento" to idEvento,
                             "idPonencia" to "",
                             "tipo" to "checkin",
-                            "fechaHora" to System.currentTimeMillis().toString()
+                            "fechaHora" to formatearFechaHora() // TODO
                         ))
                         .addOnSuccessListener {
                             scope.launch {
@@ -111,9 +114,10 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                                     AsistenciaData(
                                         idAsistencia = idAsistencia,
                                         idParticipante = idParticipante,
+                                        idEvento = idEvento,
                                         idPonencia = "",
                                         tipo = "checkin",
-                                        fechaHora = System.currentTimeMillis().toString()
+                                        fechaHora = formatearFechaHora()
                                     )
                                 )
                                 checkInRealizado = true
@@ -212,4 +216,9 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
             }
         }
     }
+}
+
+fun formatearFechaHora(): String {
+    val sdfCompleto = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+    return sdfCompleto.format(Date())
 }

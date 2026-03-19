@@ -3,6 +3,6 @@ package com.example.ponenciapp.data
 object Estructura {
     object DB {
         const val NAME = "ponenciapp_db"
-        const val VERSION = 2
+        const val VERSION = 3
     }
 }
