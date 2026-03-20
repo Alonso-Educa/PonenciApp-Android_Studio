@@ -1,6 +1,8 @@
 package com.example.ponenciapp.screens.organizador
 
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -93,6 +95,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 // Para mostrar los detalles del evento cuando lo tocas
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleEvento(navController: NavController, idEvento: String) {
@@ -129,8 +132,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
         // Carga el usuario creador del evento
         organizador = participanteDao.getParticipantePorId(uid)
         // Carga el evento desde firebase
-        firestore.collection("eventos").document(idEvento).get()
-            .addOnSuccessListener { doc ->
+        firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
                 evento = EventoData(
                     idEvento = doc.id,
                     nombre = doc.getString("nombre") ?: "",
@@ -141,17 +143,14 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                     codigoEvento = doc.getString("codigoEvento") ?: ""
                 )
                 scope.launch { evento?.let { eventoDao.insertar(it) } }
-            }
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 scope.launch {
                     evento = eventoDao.getEventoPorId(idEvento)
                 }
             }
 
         // Carga sus ponencias desde firebase
-        firestore.collection("ponencias")
-            .whereEqualTo("idEvento", idEvento)
-            .get()
+        firestore.collection("ponencias").whereEqualTo("idEvento", idEvento).get()
             .addOnSuccessListener { result ->
                 val lista = result.documents.mapNotNull { doc ->
                     try {
@@ -175,15 +174,12 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                     listaPonencias = lista
                     isLoading = false
                 }
-            }
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 scope.launch {
                     listaPonencias = ponenciaDao.getPonenciasDeEvento(idEvento)
                     isLoading = false
                     Toast.makeText(
-                        context,
-                        "Sin conexión, mostrando datos guardados",
-                        Toast.LENGTH_SHORT
+                        context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
                     ).show()
                 }
             }
@@ -193,138 +189,131 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = evento?.nombre ?: "Detalle del evento",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp
+                Text(
+                    text = evento?.nombre ?: "Detalle del evento",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 20.sp
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = Color.White
+            ), navigationIcon = {
+                // Botón para volver atrás
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Atrás",
+                        tint = Color.White
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                ),
-                navigationIcon = {
-                    // Botón para volver atrás
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Atrás",
-                            tint = Color.White
+                }
+            }, actions = {
+                // Botón cerrar sesión
+                IconButton(onClick = {
+                    scope.launch {
+                        auth.signOut()
+                        navController.navigate(AppScreens.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }) {
+                    Icon(
+                        Icons.Default.Logout,
+                        contentDescription = "Cerrar sesión",
+                        tint = Color.White
+                    )
+                }
+                // Icono de usuario
+                organizador?.let { usuario ->
+                    var showCardDialog by remember { mutableStateOf(false) }
+                    val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
+                            .clickable { showCardDialog = true }) {
+                        Text(
+                            modifier = Modifier.align(Alignment.Center),
+                            text = inicial,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White
                         )
                     }
-                },
-                actions = {
-                    // Botón cerrar sesión
-                    IconButton(onClick = {
-                        scope.launch {
-                            auth.signOut()
-                            navController.navigate(AppScreens.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color.White
-                        )
-                    }
-                    // Icono de usuario
-                    organizador?.let { usuario ->
-                        var showCardDialog by remember { mutableStateOf(false) }
-                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
 
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                                .clickable { showCardDialog = true }
-                        ) {
-                            Text(
-                                modifier = Modifier.align(Alignment.Center),
-                                text = inicial,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
-                            )
-                        }
-
-                        if (showCardDialog) {
-                            Dialog(onDismissRequest = { showCardDialog = false }) {
-                                Card(
-                                    shape = MaterialTheme.shapes.large,
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    ),
-                                    elevation = CardDefaults.cardElevation(8.dp),
-                                    modifier = Modifier.padding(10.dp)
+                    if (showCardDialog) {
+                        Dialog(onDismissRequest = { showCardDialog = false }) {
+                            Card(
+                                shape = MaterialTheme.shapes.large,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(8.dp),
+                                modifier = Modifier.padding(10.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .widthIn(min = 200.dp, max = 300.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
+                                        Box(
                                             modifier = Modifier
-                                                .padding(16.dp)
-                                                .widthIn(min = 200.dp, max = 300.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .size(60.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.tertiary, CircleShape
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.secondary,
+                                                    CircleShape
+                                                )
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.tertiary,
-                                                        CircleShape
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        MaterialTheme.colorScheme.secondary,
-                                                        CircleShape
-                                                    )
-                                            ) {
-                                                Text(
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                    text = inicial,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = Color.White
-                                                )
-                                            }
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(
-                                                    "${usuario.nombre} ${usuario.apellidos}",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    "Email: ${usuario.emailEduca}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Text(
-                                                    "Centro: ${usuario.centro} - ${usuario.codigoCentro}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Text(
-                                                    "Rol: ${usuario.rol}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
+                                            Text(
+                                                modifier = Modifier.align(Alignment.Center),
+                                                text = inicial,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = Color.White
+                                            )
                                         }
-                                        Button(
-                                            modifier = Modifier.padding(bottom = 16.dp),
-                                            onClick = { showCardDialog = false }
-                                        ) {
-                                            Text("Cerrar")
+                                        Column(modifier = Modifier.padding(16.dp)) {
+                                            Text(
+                                                "${usuario.nombre} ${usuario.apellidos}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                "Email: ${usuario.emailEduca}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Text(
+                                                "Centro: ${usuario.centro} - ${usuario.codigoCentro}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Text(
+                                                "Rol: ${usuario.rol}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
                                         }
+                                    }
+                                    Button(
+                                        modifier = Modifier.padding(bottom = 16.dp),
+                                        onClick = { showCardDialog = false }) {
+                                        Text("Cerrar")
                                     }
                                 }
                             }
                         }
                     }
                 }
-            )
+            })
         },
         // El fab se usa para añadir ponencias
         floatingActionButton = {
@@ -332,13 +321,11 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 onClick = {
                     ponenciaEditando = null
                     showDialogPonencia = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary
+                }, containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir ponencia", tint = Color.White)
             }
-        }
-    ) { padding ->
+        }) { padding ->
         // Si está cargando, muestra el iconito de carga
         if (isLoading) {
             Box(
@@ -451,8 +438,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
 
                         // Botón para generar el QR del evento
                         Button(
-                            onClick = { showQREvento = true },
-                            modifier = Modifier.fillMaxWidth()
+                            onClick = { showQREvento = true }, modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.QrCode, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
@@ -469,12 +455,12 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                 onClick = {
                                     scope.launch {
                                         exportarAsistenciasExcel(
-                                            context,
-                                            evento?.idEvento ?: ""
+                                            context, evento?.idEvento ?: ""
                                         )
                                     }
-                                },
-                                modifier = Modifier.weight(1f).fillMaxWidth()
+                                }, modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
                             ) {
                                 Icon(Lucide.FileSpreadsheet, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -485,12 +471,12 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                 onClick = {
                                     scope.launch {
                                         exportarAsistenciasPdf(
-                                            context,
-                                            evento?.idEvento ?: ""
+                                            context, evento?.idEvento ?: ""
                                         )
                                     }
-                                },
-                                modifier = Modifier.weight(1f).fillMaxWidth()
+                                }, modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
                             ) {
                                 Icon(Lucide.File, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -643,17 +629,16 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 }
                 showDialogPonencia = false
                 ponenciaEditando = null
-            }
-        )
+            })
     }
 
     // Dialog confirmar eliminar
     if (showDialogEliminar && ponenciaEditando != null) {
         AlertDialog(
             onDismissRequest = {
-                showDialogEliminar = false
-                ponenciaEditando = null
-            },
+            showDialogEliminar = false
+            ponenciaEditando = null
+        },
             icon = { Icon(Icons.Default.Warning, contentDescription = null) },
             title = { Text("Eliminar ponencia") },
             text = { Text("¿Deseas eliminar \"${ponenciaEditando!!.titulo}\"?") },
@@ -677,8 +662,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                     showDialogEliminar = false
                     ponenciaEditando = null
                 }) { Text("Cancelar") }
-            }
-        )
+            })
     }
 
     if (showQREvento) {
@@ -686,8 +670,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
             DialogMostrarQR(
                 titulo = "QR Check-in — ${it.nombre}",
                 contenidoQR = "checkin:${it.idEvento}",
-                onDismiss = { showQREvento = false }
-            )
+                onDismiss = { showQREvento = false })
         }
     }
 }
@@ -782,27 +765,19 @@ fun DialogCrearPonencia(
                         onClick = {
                             when {
                                 titulo.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el título",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el título", Toast.LENGTH_SHORT
                                 ).show()
 
                                 ponente.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el ponente",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el ponente", Toast.LENGTH_SHORT
                                 ).show()
 
                                 horaInicio.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Selecciona la hora de inicio",
-                                    Toast.LENGTH_SHORT
+                                    context, "Selecciona la hora de inicio", Toast.LENGTH_SHORT
                                 ).show()
 
                                 horaFin.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Selecciona la hora de fin",
-                                    Toast.LENGTH_SHORT
+                                    context, "Selecciona la hora de fin", Toast.LENGTH_SHORT
                                 ).show()
 
                                 horaFin <= horaInicio -> Toast.makeText(
@@ -826,8 +801,7 @@ fun DialogCrearPonencia(
                                         "orden" to orden,
                                         "qrCode" to (ponenciaEditando?.qrCode ?: "")
                                     )
-                                    firestore.collection("ponencias").document(idPonencia)
-                                        .set(data)
+                                    firestore.collection("ponencias").document(idPonencia).set(data)
                                         .addOnSuccessListener {
                                             val ponenciaNueva = PonenciaData(
                                                 idPonencia = idPonencia,
@@ -850,24 +824,19 @@ fun DialogCrearPonencia(
                                                 ).show()
                                                 onGuardado(ponenciaNueva)
                                             }
-                                        }
-                                        .addOnFailureListener { e ->
+                                        }.addOnFailureListener { e ->
                                             isLoading = false
                                             Toast.makeText(
-                                                context,
-                                                "Error: ${e.message}",
-                                                Toast.LENGTH_SHORT
+                                                context, "Error: ${e.message}", Toast.LENGTH_SHORT
                                             ).show()
                                         }
                                 }
                             }
-                        },
-                        enabled = !isLoading
+                        }, enabled = !isLoading
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                color = Color.White, modifier = Modifier.size(20.dp)
                             )
                         } else {
                             Text(if (ponenciaEditando == null) "Crear" else "Guardar")
@@ -910,37 +879,29 @@ fun SelectorHora(
     )
 
     if (showTimePicker) {
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    val hora = "%02d:%02d".format(
-                        timePickerState.hour,
-                        timePickerState.minute
-                    )
-                    onHoraSeleccionada(hora)
-                    showTimePicker = false
-                }) {
-                    Text("Aceptar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancelar")
-                }
-            },
-            text = {
-                TimePicker(state = timePickerState)
+        AlertDialog(onDismissRequest = { showTimePicker = false }, confirmButton = {
+            TextButton(onClick = {
+                val hora = "%02d:%02d".format(
+                    timePickerState.hour, timePickerState.minute
+                )
+                onHoraSeleccionada(hora)
+                showTimePicker = false
+            }) {
+                Text("Aceptar")
             }
-        )
+        }, dismissButton = {
+            TextButton(onClick = { showTimePicker = false }) {
+                Text("Cancelar")
+            }
+        }, text = {
+            TimePicker(state = timePickerState)
+        })
     }
 }
 
 @Composable
 fun DialogMostrarQR(
-    titulo: String,
-    contenidoQR: String,
-    onDismiss: () -> Unit
+    titulo: String, contenidoQR: String, onDismiss: () -> Unit
 ) {
     val qrBitmap = remember(contenidoQR) {
         generarQRBitmap(contenidoQR)

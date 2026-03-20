@@ -46,7 +46,7 @@ android {
 dependencies {
 
     // ---------------- COMPOSE ----------------
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation(platform("androidx.compose:compose-bom:2025.03.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -79,7 +79,6 @@ dependencies {
 
     // Generar QR
     implementation("com.google.zxing:core:3.5.2")
-    implementation("androidx.compose.ui:ui-graphics:1.6.0")
 
     // Generar documentos
     implementation("org.apache.poi:poi:5.2.0")
@@ -88,6 +87,7 @@ dependencies {
     // ---------------- ROOM ----------------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    implementation(libs.androidx.compose.animation)
     ksp("androidx.room:room-compiler:2.6.1")
 
     // ---------------- FIREBASE  ----------------

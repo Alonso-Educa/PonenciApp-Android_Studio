@@ -101,8 +101,7 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
         participante = participanteDao.getParticipantePorId(uid)
 
         // Carga sus ponencias desde firebase
-        firestore.collection("ponencias").document(idPonencia).get()
-            .addOnSuccessListener { doc ->
+        firestore.collection("ponencias").document(idPonencia).get().addOnSuccessListener { doc ->
                 ponencia = PonenciaData(
                     idPonencia = doc.id,
                     titulo = doc.getString("titulo") ?: "",
@@ -142,9 +141,13 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                 scope.launch {
                     ponencia = ponenciaDao.getPonenciaPorId(idPonencia)
                     if (ponencia == null) {
-                        Toast.makeText(context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
+                        ).show()
                     }
                     isLoading = false
                 }
@@ -155,136 +158,128 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = ponencia?.titulo ?: "Detalle",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp
-                        //modifier = Modifier.padding(end = 48.dp)
+                Text(
+                    text = ponencia?.titulo ?: "Detalle",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 20.sp
+                    //modifier = Modifier.padding(end = 48.dp)
+                )
+            }, colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                titleContentColor = Color.White
+            ), navigationIcon = {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Atrás",
+                        tint = Color.White
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                ),
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Atrás",
-                            tint = Color.White
+                }
+            }, actions = {
+                // Botón cerrar sesión
+                IconButton(onClick = {
+                    scope.launch {
+                        auth.signOut()
+                        navController.navigate(AppScreens.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }) {
+                    Icon(
+                        Icons.Default.Logout,
+                        contentDescription = "Cerrar sesión",
+                        tint = Color.White
+                    )
+                }
+                // Icono de usuario
+                participante?.let { usuario ->
+                    var showCardDialog by remember { mutableStateOf(false) }
+                    val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
+                            .clickable { showCardDialog = true }) {
+                        Text(
+                            modifier = Modifier.align(Alignment.Center),
+                            text = inicial,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White
                         )
                     }
-                },
-                actions = {
-                    // Botón cerrar sesión
-                    IconButton(onClick = {
-                        scope.launch {
-                            auth.signOut()
-                            navController.navigate(AppScreens.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color.White
-                        )
-                    }
-                    // Icono de usuario
-                    participante?.let { usuario ->
-                        var showCardDialog by remember { mutableStateOf(false) }
-                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
 
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                                .clickable { showCardDialog = true }
-                        ) {
-                            Text(
-                                modifier = Modifier.align(Alignment.Center),
-                                text = inicial,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
-                            )
-                        }
-
-                        if (showCardDialog) {
-                            Dialog(onDismissRequest = { showCardDialog = false }) {
-                                Card(
-                                    shape = MaterialTheme.shapes.large,
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    ),
-                                    elevation = CardDefaults.cardElevation(8.dp),
-                                    modifier = Modifier.padding(10.dp)
+                    if (showCardDialog) {
+                        Dialog(onDismissRequest = { showCardDialog = false }) {
+                            Card(
+                                shape = MaterialTheme.shapes.large,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(8.dp),
+                                modifier = Modifier.padding(10.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .widthIn(min = 200.dp, max = 300.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
+                                        Box(
                                             modifier = Modifier
-                                                .padding(16.dp)
-                                                .widthIn(min = 200.dp, max = 300.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                                .size(60.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.tertiary, CircleShape
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.secondary,
+                                                    CircleShape
+                                                )
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.tertiary,
-                                                        CircleShape
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        MaterialTheme.colorScheme.secondary,
-                                                        CircleShape
-                                                    )
-                                            ) {
-                                                Text(
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                    text = inicial,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = Color.White
-                                                )
-                                            }
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(
-                                                    "${usuario.nombre} ${usuario.apellidos}",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    "Email: ${usuario.emailEduca}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Text(
-                                                    "Centro: ${usuario.centro}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
+                                            Text(
+                                                modifier = Modifier.align(Alignment.Center),
+                                                text = inicial,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = Color.White
+                                            )
                                         }
-                                        Button(
-                                            modifier = Modifier.padding(bottom = 16.dp),
-                                            onClick = { showCardDialog = false }
-                                        ) {
-                                            Text("Cerrar")
+                                        Column(modifier = Modifier.padding(16.dp)) {
+                                            Text(
+                                                "${usuario.nombre} ${usuario.apellidos}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                "Email: ${usuario.emailEduca}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Text(
+                                                "Centro: ${usuario.centro}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
                                         }
+                                    }
+                                    Button(
+                                        modifier = Modifier.padding(bottom = 16.dp),
+                                        onClick = { showCardDialog = false }) {
+                                        Text("Cerrar")
                                     }
                                 }
                             }
                         }
                     }
                 }
-            )
-        }
-    ) { padding ->
+            })
+        }) { padding ->
 
         // Si está cargando muestra el iconito de carga
         if (isLoading) {
@@ -355,8 +350,7 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    ), modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
@@ -392,8 +386,7 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                                     modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
                                 )
                                 Text(
-                                    evento?.fecha ?: "",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    evento?.fecha ?: "", style = MaterialTheme.typography.bodyMedium
                                 )
                                 Icon(
                                     Icons.Default.LocationOn,
@@ -401,8 +394,7 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                                     modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
                                 )
                                 Text(
-                                    evento?.lugar ?: "",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    evento?.lugar ?: "", style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
@@ -430,12 +422,9 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                     onClick = {
                         // TODO: implementar el escaner de cada ponencia individual
                         Toast.makeText(
-                            context,
-                            "Escáner QR aún no implementado",
-                            Toast.LENGTH_SHORT
+                            context, "Escáner QR aún no implementado", Toast.LENGTH_SHORT
                         ).show()
-                    },
-                    modifier = Modifier
+                    }, modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                 ) {

@@ -45,9 +45,7 @@ import java.util.concurrent.Executors
 @Composable
 fun EscanerQR(
     // devuelve el texto del QR
-    onQRLeido: (String) -> Unit,
-    onCancelar: () -> Unit,
-    modifier: Modifier = Modifier
+    onQRLeido: (String) -> Unit, onCancelar: () -> Unit, modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -55,8 +53,10 @@ fun EscanerQR(
     // Para saber si se le ha dado permiso a la cámara
     var tienePermiso by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -76,8 +76,7 @@ fun EscanerQR(
     // Si no tiene permiso, muestra un mensaje y botones para concederlo o cancelar
     if (!tienePermiso) {
         Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -119,8 +118,7 @@ fun EscanerQR(
                     // ml kit para escanear el qr
                     val scanner = BarcodeScanning.getClient()
                     val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
                         .also { analysis ->
                             analysis.setAnalyzer(executor) { imageProxy ->
                                 if (yaLeido) {
@@ -131,20 +129,17 @@ fun EscanerQR(
                                 if (mediaImage != null) {
                                     // frame de la cámara
                                     val imagen = InputImage.fromMediaImage(
-                                        mediaImage,
-                                        imageProxy.imageInfo.rotationDegrees
+                                        mediaImage, imageProxy.imageInfo.rotationDegrees
                                     )
                                     // Procesa la imagen
-                                    scanner.process(imagen)
-                                        .addOnSuccessListener { barcodes ->
+                                    scanner.process(imagen).addOnSuccessListener { barcodes ->
                                             barcodes.firstOrNull {
                                                 it.format == Barcode.FORMAT_QR_CODE
                                             }?.rawValue?.let { valor ->
                                                 yaLeido = true
                                                 onQRLeido(valor)
                                             }
-                                        }
-                                        .addOnCompleteListener { imageProxy.close() }
+                                        }.addOnCompleteListener { imageProxy.close() }
                                 } else {
                                     imageProxy.close()
                                 }
@@ -154,16 +149,12 @@ fun EscanerQR(
                     // Vincula la nueva configuración a la cámara y abre la trasera
                     cameraProvider.unbindAll()
                     cameraProvider.bindToLifecycle(
-                        lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
-                        imageAnalysis
+                        lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalysis
                     )
                 }, ContextCompat.getMainExecutor(ctx))
 
                 previewView
-            },
-            modifier = Modifier.fillMaxSize()
+            }, modifier = Modifier.fillMaxSize()
         )
 
         // Botón de cancelar para cerrar la cámara

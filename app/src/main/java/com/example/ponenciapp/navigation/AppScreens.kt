@@ -9,6 +9,7 @@ sealed class AppScreens(val route: String) {
     object Valoracion : AppScreens("Valoracion")
     object Ajustes : AppScreens("Ajustes")
     object MisEventos : AppScreens("MisEventos")
+    object ChatbotAsistente : AppScreens("ChatbotAsistente")
     object DetalleEvento : AppScreens("DetalleEvento/{idEvento}") {
         fun createRoute(idEvento: String) = "DetalleEvento/$idEvento"
     }
@@ -29,6 +30,7 @@ sealed class AppScreens(val route: String) {
                 "MisEventos" -> MisEventos
                 "DetalleEvento" -> DetalleEvento
                 "DetallePonencia" -> DetallePonencia
+                "ChatbotAsistente" -> ChatbotAsistente
                 else -> null
             }
         }

@@ -55,6 +55,7 @@ import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
+import com.example.ponenciapp.screens.participante.formatearFechaHora
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -152,8 +153,7 @@ fun Login(navController: NavController) {
 
         // Recuperar contraseña
         TextButton(
-            onClick = { showDialogRecuperar = true },
-            modifier = Modifier.align(Alignment.End)
+            onClick = { showDialogRecuperar = true }, modifier = Modifier.align(Alignment.End)
         ) {
             Text("¿Has olvidado tu contraseña?")
         }
@@ -165,21 +165,15 @@ fun Login(navController: NavController) {
             onClick = {
                 when {
                     email.isBlank() -> Toast.makeText(
-                        context,
-                        "Introduce tu email",
-                        Toast.LENGTH_SHORT
+                        context, "Introduce tu email", Toast.LENGTH_SHORT
                     ).show()
 
                     !emailPattern.matches(email) -> Toast.makeText(
-                        context,
-                        "Formato de email inválido",
-                        Toast.LENGTH_SHORT
+                        context, "Formato de email inválido", Toast.LENGTH_SHORT
                     ).show()
 
                     contrasena.isBlank() -> Toast.makeText(
-                        context,
-                        "Introduce tu contraseña",
-                        Toast.LENGTH_SHORT
+                        context, "Introduce tu contraseña", Toast.LENGTH_SHORT
                     ).show()
 
                     contrasena.length < 6 -> Toast.makeText(
@@ -193,6 +187,8 @@ fun Login(navController: NavController) {
                         auth.signInWithEmailAndPassword(email, contrasena)
                             .addOnSuccessListener { result ->
                                 val uid = result.user?.uid ?: ""
+                                // Email actual en Firebase Auth
+                                val emailActualAuth = result.user?.email ?: ""
                                 firestore.collection("participantes").document(uid).get()
                                     .addOnSuccessListener { doc ->
                                         if (!doc.exists()) {
@@ -204,19 +200,24 @@ fun Login(navController: NavController) {
                                             ).show()
                                             return@addOnSuccessListener
                                         }
+                                        val emailEnFirestore = doc.getString("emailEduca") ?: ""
+
+                                        // Si el email de Auth es diferente al de Firestore, actualizar Firestore
+                                        if (emailActualAuth != emailEnFirestore) {
+                                            firestore.collection("participantes").document(uid)
+                                                .update("emailEduca", emailActualAuth)
+                                        }
                                         scope.launch {
                                             participanteDao.insertar(
                                                 ParticipanteData(
                                                     idParticipante = uid,
                                                     nombre = doc.getString("nombre") ?: "",
                                                     apellidos = doc.getString("apellidos") ?: "",
-                                                    emailEduca = doc.getString("emailEduca") ?: "",
+                                                    emailEduca = doc.getString("emailEduca") ?: "", // ← se actualiza al hacer login
                                                     centro = doc.getString("centro") ?: "",
-                                                    codigoCentro = doc.getString("codigoCentro")
-                                                        ?: "",
+                                                    codigoCentro = doc.getString("codigoCentro") ?: "",
                                                     rol = doc.getString("rol") ?: "participante",
-                                                    fechaRegistro = doc.getString("fechaRegistro")
-                                                        ?: "",
+                                                    fechaRegistro = doc.getString("fechaRegistro") ?: "",
                                                     idEvento = doc.getString("idEvento") ?: ""
                                                 )
                                             )
@@ -225,8 +226,7 @@ fun Login(navController: NavController) {
                                                 popUpTo(0) { inclusive = true }
                                             }
                                         }
-                                    }
-                                    .addOnFailureListener { e ->
+                                    }.addOnFailureListener { e ->
                                         estaCargando = false
                                         Toast.makeText(
                                             context,
@@ -234,28 +234,22 @@ fun Login(navController: NavController) {
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
-                            }
-                            .addOnFailureListener {
+                            }.addOnFailureListener {
                                 estaCargando = false
                                 Toast.makeText(
-                                    context,
-                                    "Email o contraseña incorrectos",
-                                    Toast.LENGTH_SHORT
+                                    context, "Email o contraseña incorrectos", Toast.LENGTH_SHORT
                                 ).show()
                             }
                     }
                 }
-            },
-            modifier = Modifier
+            }, modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            enabled = !estaCargando
+                .height(50.dp), enabled = !estaCargando
         ) {
             // Si está cargando muestra un iconito de carga
             if (estaCargando) {
                 CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    color = Color.White, modifier = Modifier.size(24.dp)
                 )
             } else {
                 Text("Iniciar sesión", fontSize = 16.sp)
@@ -273,8 +267,7 @@ fun Login(navController: NavController) {
             modifier = Modifier.padding(vertical = 8.dp)
         )
         OutlinedButton(
-            onClick = { showDialogRegistro = true },
-            modifier = Modifier.fillMaxWidth()
+            onClick = { showDialogRegistro = true }, modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrarse")
         }
@@ -283,8 +276,7 @@ fun Login(navController: NavController) {
     // Dialog de recuperar contraseña
     if (showDialogRecuperar) {
         DialogRecuperarContrasena(
-            onDismiss = { showDialogRecuperar = false }
-        )
+            onDismiss = { showDialogRecuperar = false })
     }
 
 
@@ -341,32 +333,24 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
                     Button(onClick = {
                         when {
                             emailRecuperar.isBlank() -> Toast.makeText(
-                                context,
-                                "Introduce tu email",
-                                Toast.LENGTH_SHORT
+                                context, "Introduce tu email", Toast.LENGTH_SHORT
                             ).show()
 
                             !emailPattern.matches(emailRecuperar) -> Toast.makeText(
-                                context,
-                                "Formato de email inválido",
-                                Toast.LENGTH_SHORT
+                                context, "Formato de email inválido", Toast.LENGTH_SHORT
                             ).show()
 
                             else -> {
-                                auth.sendPasswordResetEmail(emailRecuperar)
-                                    .addOnSuccessListener {
+                                auth.sendPasswordResetEmail(emailRecuperar).addOnSuccessListener {
                                         Toast.makeText(
                                             context,
                                             "Email de recuperación enviado",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                         onDismiss()
-                                    }
-                                    .addOnFailureListener {
+                                    }.addOnFailureListener {
                                         Toast.makeText(
-                                            context,
-                                            "Error enviando el email",
-                                            Toast.LENGTH_SHORT
+                                            context, "Error enviando el email", Toast.LENGTH_SHORT
                                         ).show()
                                     }
                             }
@@ -472,8 +456,7 @@ fun DialogRegistro(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                else Icons.Default.Visibility,
-                                contentDescription = null
+                                else Icons.Default.Visibility, contentDescription = null
                             )
                         }
                     },
@@ -490,41 +473,30 @@ fun DialogRegistro(
                         onClick = {
                             when {
                                 nombre.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el nombre",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el nombre", Toast.LENGTH_SHORT
                                 ).show()
 
                                 apellidos.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce los apellidos",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce los apellidos", Toast.LENGTH_SHORT
                                 ).show()
 
                                 emailEduca.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el email",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el email", Toast.LENGTH_SHORT
                                 ).show()
 
                                 !emailPattern.matches(emailEduca) -> Toast.makeText(
-                                    context,
-                                    "Formato de email inválido",
-                                    Toast.LENGTH_SHORT
+                                    context, "Formato de email inválido", Toast.LENGTH_SHORT
                                 ).show()
 
                                 centro.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el centro",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el centro", Toast.LENGTH_SHORT
                                 ).show()
 
                                 codigoCentro.isBlank() -> Toast.makeText(
-                                    context,
-                                    "Introduce el código de centro",
-                                    Toast.LENGTH_SHORT
+                                    context, "Introduce el código de centro", Toast.LENGTH_SHORT
                                 ).show()
 
+                                // Cambiar minimo de caracteres y pedir caracter especial TODO
                                 password.length < 6 -> Toast.makeText(
                                     context,
                                     "La contraseña debe tener al menos 6 caracteres",
@@ -543,12 +515,10 @@ fun DialogRegistro(
                                                 "centro" to centro,
                                                 "codigoCentro" to codigoCentro,
                                                 "rol" to "participante",
-                                                "fechaRegistro" to System.currentTimeMillis()
-                                                    .toString()
+                                                "fechaRegistro" to formatearFechaHora()
                                             )
                                             firestore.collection("participantes").document(uid)
-                                                .set(data)
-                                                .addOnSuccessListener {
+                                                .set(data).addOnSuccessListener {
                                                     scope.launch {
                                                         participanteDao.insertar(
                                                             ParticipanteData(
@@ -559,8 +529,7 @@ fun DialogRegistro(
                                                                 centro = centro,
                                                                 codigoCentro = codigoCentro,
                                                                 rol = "participante",
-                                                                fechaRegistro = System.currentTimeMillis()
-                                                                    .toString()
+                                                                fechaRegistro = formatearFechaHora()
                                                             )
                                                         )
                                                         isLoading = false
@@ -573,14 +542,12 @@ fun DialogRegistro(
                                                         // Cerrar sesión tras registrar para que el usuario haga login manualmente
                                                         auth.signOut()
                                                         notificationHandler.enviarNotificacionSimple(
-                                                            "Registro exitoso",
-                                                            "Bienvenido $nombre"
+                                                            "Registro exitoso", "Bienvenido $nombre"
                                                         )
                                                     }
-                                                }
-                                                .addOnFailureListener { e ->
+                                                }.addOnFailureListener { e ->
                                                     isLoading = false
-                                                    // Si falla Firestore, eliminar la cuenta de Auth para no dejar datos huérfanos
+                                                    // Si falla Firestore, elimina la cuenta de Auth para no dejar datos sin registrar
                                                     auth.currentUser?.delete()
                                                     Toast.makeText(
                                                         context,
@@ -588,8 +555,7 @@ fun DialogRegistro(
                                                         Toast.LENGTH_SHORT
                                                     ).show()
                                                 }
-                                        }
-                                        .addOnFailureListener { e ->
+                                        }.addOnFailureListener { e ->
                                             isLoading = false
                                             Toast.makeText(
                                                 context,
@@ -599,13 +565,11 @@ fun DialogRegistro(
                                         }
                                 }
                             }
-                        },
-                        enabled = !isLoading
+                        }, enabled = !isLoading
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                color = Color.White, modifier = Modifier.size(20.dp)
                             )
                         } else {
                             Text("Registrar")

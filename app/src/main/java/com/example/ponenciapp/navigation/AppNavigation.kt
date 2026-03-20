@@ -10,11 +10,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ponenciapp.screens.Login
-import com.example.ponenciapp.screens.PantallaPrincipal
-import com.example.ponenciapp.screens.comun.UnirseEvento
-import com.example.ponenciapp.screens.organizador.DetalleEvento
-import com.example.ponenciapp.screens.participante.DetallePonencia
+import com.example.ponenciapp.screens.*
+import com.example.ponenciapp.screens.comun.*
+import com.example.ponenciapp.screens.organizador.*
+import com.example.ponenciapp.screens.participante.*
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -74,6 +73,9 @@ fun AppNavigation(destinoNotificacion: String? = null) {
         ) { backStackEntry ->
             val idPonencia = backStackEntry.arguments?.getString("idPonencia") ?: ""
             DetallePonencia(navController, idPonencia)
+        }
+        composable(AppScreens.ChatbotAsistente.route) {
+            ChatbotAsistente(navController)
         }
     }
 }

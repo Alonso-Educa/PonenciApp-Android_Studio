@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,16 +64,13 @@ fun Valoracion(idEvento: String, idParticipante: String) {
     var isSaving by remember { mutableStateOf(false) }
 
     // Valoración general del evento
-    var puntuacionEvento by remember { mutableStateOf(0) }
+    var puntuacionEvento by remember { mutableIntStateOf(0) }
     var comentarioEvento by remember { mutableStateOf("") }
 
-    // Si ya existe valoración previa, cargarla
+    // Si ya existe valoración previa, la carga
     LaunchedEffect(Unit) {
-        firestore.collection("valoraciones")
-            .whereEqualTo("idParticipante", idParticipante)
-            .whereEqualTo("idEvento", idEvento)
-            .whereEqualTo("tipo", "evento")
-            .get()
+        firestore.collection("valoraciones").whereEqualTo("idParticipante", idParticipante)
+            .whereEqualTo("idEvento", idEvento).whereEqualTo("tipo", "evento").get()
             .addOnSuccessListener { result ->
                 if (!result.isEmpty) {
                     val doc = result.documents.first()
@@ -80,8 +78,7 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                     comentarioEvento = doc.getString("comentario") ?: ""
                 }
                 isLoading = false  // ← añadir aquí
-            }
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 isLoading = false  // ← añadir aquí
             }
     }
@@ -101,14 +98,11 @@ fun Valoracion(idEvento: String, idParticipante: String) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            "Valoración",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            "Valoración", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
         )
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(4.dp)
+            modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -125,9 +119,7 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                     color = Color.Gray
                 )
                 SelectorEstrellas(
-                    puntuacion = puntuacionEvento,
-                    onPuntuacionChange = { puntuacionEvento = it }
-                )
+                    puntuacion = puntuacionEvento, onPuntuacionChange = { puntuacionEvento = it })
                 OutlinedTextField(
                     value = comentarioEvento,
                     onValueChange = { comentarioEvento = it },
@@ -142,25 +134,23 @@ fun Valoracion(idEvento: String, idParticipante: String) {
             onClick = {
                 if (puntuacionEvento == 0) {
                     Toast.makeText(
-                        context,
-                        "Introduce una puntuación del evento",
-                        Toast.LENGTH_SHORT
+                        context, "Introduce una puntuación del evento", Toast.LENGTH_SHORT
                     ).show()
                     return@Button
                 }
                 isSaving = true
                 val idValoracion = "${idParticipante}_${idEvento}_evento"
-                firestore.collection("valoraciones").document(idValoracion)
-                    .set(mapOf(
-                        "idValoracion" to idValoracion,
-                        "idParticipante" to idParticipante,
-                        "idEvento" to idEvento,
-                        "idPonencia" to "",
-                        "tipo" to "evento",
-                        "puntuacion" to puntuacionEvento,
-                        "comentario" to comentarioEvento
-                    ))
-                    .addOnSuccessListener {
+                firestore.collection("valoraciones").document(idValoracion).set(
+                        mapOf(
+                            "idValoracion" to idValoracion,
+                            "idParticipante" to idParticipante,
+                            "idEvento" to idEvento,
+                            "idPonencia" to "",
+                            "tipo" to "evento",
+                            "puntuacion" to puntuacionEvento,
+                            "comentario" to comentarioEvento
+                        )
+                    ).addOnSuccessListener {
                         scope.launch {
                             valoracionDao.insertar(
                                 ValoracionData(
@@ -174,25 +164,18 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                             )
                             isSaving = false
                             Toast.makeText(
-                                context,
-                                "Valoración guardada correctamente",
-                                Toast.LENGTH_SHORT
+                                context, "Valoración guardada correctamente", Toast.LENGTH_SHORT
                             ).show()
                         }
-                    }
-                    .addOnFailureListener { e ->
+                    }.addOnFailureListener { e ->
                         isSaving = false
                         Toast.makeText(
-                            context,
-                            "Error guardando valoración: ${e.message}",
-                            Toast.LENGTH_SHORT
+                            context, "Error guardando valoración: ${e.message}", Toast.LENGTH_SHORT
                         ).show()
                     }
-            },
-            modifier = Modifier
+            }, modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            enabled = !isSaving
+                .height(50.dp), enabled = !isSaving
         ) {
             if (isSaving) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
@@ -206,21 +189,17 @@ fun Valoracion(idEvento: String, idParticipante: String) {
 // Selector de estrellas
 @Composable
 fun SelectorEstrellas(
-    puntuacion: Int,
-    onPuntuacionChange: (Int) -> Unit
+    puntuacion: Int, onPuntuacionChange: (Int) -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (1..5).forEach { estrella ->
             IconButton(
-                onClick = { onPuntuacionChange(estrella) },
-                modifier = Modifier.size(36.dp)
+                onClick = { onPuntuacionChange(estrella) }, modifier = Modifier.size(36.dp)
             ) {
                 Icon(
-                    imageVector = if (estrella <= puntuacion)
-                        Icons.Filled.Star else Icons.Filled.StarBorder,
+                    imageVector = if (estrella <= puntuacion) Icons.Filled.Star else Icons.Filled.StarBorder,
                     contentDescription = "Estrella $estrella",
-                    tint = if (estrella <= puntuacion)
-                        Color(0xFFFFB300) else Color.Gray,
+                    tint = if (estrella <= puntuacion) Color(0xFFFFB300) else Color.Gray,
                     modifier = Modifier.size(28.dp)
                 )
             }

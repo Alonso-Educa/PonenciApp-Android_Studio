@@ -72,9 +72,7 @@ fun UnirseEvento(navController: NavController) {
     // Interceptar botón atrás, así el usuario no puede salir sin unirse
     BackHandler(true) {
         Toast.makeText(
-            context,
-            "Debes unirte a un evento para continuar",
-            Toast.LENGTH_SHORT
+            context, "Debes unirte a un evento para continuar", Toast.LENGTH_SHORT
         ).show()
     }
 
@@ -95,9 +93,7 @@ fun UnirseEvento(navController: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            "Unirse a un evento",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            "Unirse a un evento", fontSize = 24.sp, fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -127,18 +123,14 @@ fun UnirseEvento(navController: NavController) {
                 when {
                     // Validación de si el campo está vacío
                     codigoEvento.isBlank() -> Toast.makeText(
-                        context,
-                        "Introduce el código del evento",
-                        Toast.LENGTH_SHORT
+                        context, "Introduce el código del evento", Toast.LENGTH_SHORT
                     ).show()
 
                     else -> {
                         isLoading = true
                         // Busca en Firestore el evento con ese código
-                        firestore.collection("eventos")
-                            .whereEqualTo("codigoEvento", codigoEvento)
-                            .get()
-                            .addOnSuccessListener { result ->
+                        firestore.collection("eventos").whereEqualTo("codigoEvento", codigoEvento)
+                            .get().addOnSuccessListener { result ->
                                 // Si no encontró ningún evento con ese código
                                 if (result.isEmpty) {
                                     isLoading = false
@@ -176,8 +168,7 @@ fun UnirseEvento(navController: NavController) {
 
                                         // Actualizar participante con idEvento en Firestore
                                         firestore.collection("participantes").document(uid)
-                                            .update("idEvento", idEvento)
-                                            .addOnSuccessListener {
+                                            .update("idEvento", idEvento).addOnSuccessListener {
                                                 isLoading = false
                                                 Toast.makeText(
                                                     context,
@@ -187,8 +178,7 @@ fun UnirseEvento(navController: NavController) {
 //                                                navController.navigate(AppScreens.PantallaPrincipal.route) {
 //                                                    popUpTo(0) { inclusive = true }
 //                                                }
-                                            }
-                                            .addOnFailureListener { e ->
+                                            }.addOnFailureListener { e ->
                                                 isLoading = false
                                                 Toast.makeText(
                                                     context,
@@ -198,22 +188,27 @@ fun UnirseEvento(navController: NavController) {
                                             }
 
                                         // Añadir el participante a la lista de participantes del evento
-                                        firestore.collection("eventos").document(idEvento)
-                                            .set(
+                                        firestore.collection("eventos").document(idEvento).set(
                                                 mapOf("participantes" to FieldValue.arrayUnion(uid)),
                                                 SetOptions.merge()
-                                            )
-                                            .addOnSuccessListener {
+                                            ).addOnSuccessListener {
                                                 isLoading = false
-                                                Toast.makeText(context, "Te has unido al evento correctamente", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Te has unido al evento correctamente",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                                 // Limpia la pila de navegación para que el usuario no pueda volver atrás
                                                 navController.navigate(AppScreens.PantallaPrincipal.route) {
                                                     popUpTo(0) { inclusive = true }
                                                 }
-                                            }
-                                            .addOnFailureListener { e ->
+                                            }.addOnFailureListener { e ->
                                                 isLoading = false
-                                                Toast.makeText(context, "Error al unirse al evento: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error al unirse al evento: ${e.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                     }
                                 }
@@ -229,17 +224,14 @@ fun UnirseEvento(navController: NavController) {
                             }
                     }
                 }
-            },
-            modifier = Modifier
+            }, modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            enabled = !isLoading
+                .height(50.dp), enabled = !isLoading
         ) {
             // Muestra un iconito de carga cuando se procesa la solicitud
             if (isLoading) {
                 CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    color = Color.White, modifier = Modifier.size(24.dp)
                 )
             } else {
                 Text("Unirse al evento", fontSize = 16.sp)
@@ -254,8 +246,7 @@ fun UnirseEvento(navController: NavController) {
                 navController.navigate(AppScreens.Login.route) {
                     popUpTo(0) { inclusive = true }
                 }
-            }
-        ) {
+            }) {
             Text("Cerrar sesión", color = Color.Gray)
         }
     }

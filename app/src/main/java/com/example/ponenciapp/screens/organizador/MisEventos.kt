@@ -96,9 +96,7 @@ fun MisEventos(navController: NavController) {
 
     // Cargar eventos del organizador
     LaunchedEffect(Unit) {
-        firestore.collection("eventos")
-            .whereEqualTo("idOrganizador", uid)
-            .get()
+        firestore.collection("eventos").whereEqualTo("idOrganizador", uid).get()
             .addOnSuccessListener { result ->
                 val lista = result.documents.mapNotNull { doc ->
                     try {
@@ -111,21 +109,26 @@ fun MisEventos(navController: NavController) {
                             contrasena = doc.getString("contrasena") ?: "",
                             codigoEvento = doc.getString("codigoEvento") ?: ""
                         )
-                    } catch (e: Exception) { null }
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
                 scope.launch {
                     lista.forEach { eventoDao.insertar(it) }
                     listaEventos = lista
                     isLoading = false
                 }
-            }
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 scope.launch {
                     listaEventos = eventoDao.getTodosEventos()
                     if (listaEventos.isEmpty()) {
-                        Toast.makeText(context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
+                        ).show()
                     }
                     isLoading = false
                 }
@@ -180,8 +183,7 @@ fun MisEventos(navController: NavController) {
                                 navController.navigate(
                                     AppScreens.DetalleEvento.createRoute(evento.idEvento)
                                 )
-                            },
-                        elevation = CardDefaults.cardElevation(4.dp)
+                            }, elevation = CardDefaults.cardElevation(4.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -198,7 +200,7 @@ fun MisEventos(navController: NavController) {
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         Lucide.CalendarDays,
                                         contentDescription = "Fecha de inicio",
@@ -212,7 +214,7 @@ fun MisEventos(navController: NavController) {
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically){
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         Icons.Default.LocationOn,
                                         contentDescription = "Lugar de localización",
@@ -277,32 +279,27 @@ fun MisEventos(navController: NavController) {
 
     // Dialog para crear o editar evento
     if (showDialogCrear) {
-        DialogCrearEvento(
-            eventoEditando = eventoEditando,
-            idOrganizador = uid,
-            onDismiss = {
-                showDialogCrear = false
-                eventoEditando = null
-            },
-            onGuardado = { eventoNuevo ->
-                listaEventos = if (eventoEditando == null) {
-                    listaEventos + eventoNuevo
-                } else {
-                    listaEventos.map { if (it.idEvento == eventoNuevo.idEvento) eventoNuevo else it }
-                }
-                showDialogCrear = false
-                eventoEditando = null
+        DialogCrearEvento(eventoEditando = eventoEditando, idOrganizador = uid, onDismiss = {
+            showDialogCrear = false
+            eventoEditando = null
+        }, onGuardado = { eventoNuevo ->
+            listaEventos = if (eventoEditando == null) {
+                listaEventos + eventoNuevo
+            } else {
+                listaEventos.map { if (it.idEvento == eventoNuevo.idEvento) eventoNuevo else it }
             }
-        )
+            showDialogCrear = false
+            eventoEditando = null
+        })
     }
 
     // Dialog para confirmar la eliminación del evento
     if (showDialogEliminar && eventoEditando != null) {
         AlertDialog(
             onDismissRequest = {
-                showDialogEliminar = false
-                eventoEditando = null
-            },
+            showDialogEliminar = false
+            eventoEditando = null
+        },
             icon = { Icon(Icons.Default.Warning, contentDescription = null) },
             title = { Text("Eliminar evento") },
             text = { Text("¿Deseas eliminar el evento \"${eventoEditando!!.nombre}\"? Esta acción no se puede deshacer.") },
@@ -326,8 +323,7 @@ fun MisEventos(navController: NavController) {
                     showDialogEliminar = false
                     eventoEditando = null
                 }) { Text("Cancelar") }
-            }
-        )
+            })
     }
 }
 
@@ -346,9 +342,7 @@ fun DialogCrearEvento(
 
     val db = remember {
         Room.databaseBuilder(
-            context.applicationContext,
-            AppDB::class.java,
-            Estructura.DB.NAME
+            context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
     val eventoDao = db.eventoDao()
@@ -398,15 +392,17 @@ fun DialogCrearEvento(
                     placeholder = { Text("dd/MM/yyyy") },
                     trailingIcon = {
                         IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Default.CalendarMonth, contentDescription = "Seleccionar fecha")
+                            Icon(
+                                Icons.Default.CalendarMonth,
+                                contentDescription = "Seleccionar fecha"
+                            )
                         }
                     },
                     readOnly = true,
                     maxLines = 3,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                )
+                        .clickable { showDatePicker = true })
 
                 // Mostrar el date picker para la fecha
                 if (showDatePicker) {
@@ -426,8 +422,7 @@ fun DialogCrearEvento(
                             TextButton(onClick = { showDatePicker = false }) {
                                 Text("Cancelar")
                             }
-                        }
-                    ) {
+                        }) {
                         DatePicker(state = datePickerState)
                     }
                 }
@@ -459,9 +454,18 @@ fun DialogCrearEvento(
                         onClick = {
                             when {
                                 // Comprobaciones
-                                nombre.isBlank() -> Toast.makeText(context, "Introduce el nombre", Toast.LENGTH_SHORT).show()
-                                fecha.isBlank() -> Toast.makeText(context, "Introduce la fecha", Toast.LENGTH_SHORT).show()
-                                lugar.isBlank() -> Toast.makeText(context, "Introduce el lugar", Toast.LENGTH_SHORT).show()
+                                nombre.isBlank() -> Toast.makeText(
+                                    context, "Introduce el nombre", Toast.LENGTH_SHORT
+                                ).show()
+
+                                fecha.isBlank() -> Toast.makeText(
+                                    context, "Introduce la fecha", Toast.LENGTH_SHORT
+                                ).show()
+
+                                lugar.isBlank() -> Toast.makeText(
+                                    context, "Introduce el lugar", Toast.LENGTH_SHORT
+                                ).show()
+
                                 else -> {
                                     isLoading = true
                                     if (eventoEditando == null) {
@@ -478,8 +482,7 @@ fun DialogCrearEvento(
                                             "idOrganizador" to idOrganizador
                                         )
                                         // Guarda el evento en Firestore
-                                        firestore.collection("eventos").document(idEvento)
-                                            .set(data)
+                                        firestore.collection("eventos").document(idEvento).set(data)
                                             .addOnSuccessListener {
                                                 val eventoNuevo = EventoData(
                                                     idEvento = idEvento,
@@ -493,13 +496,20 @@ fun DialogCrearEvento(
                                                 scope.launch {
                                                     eventoDao.insertar(eventoNuevo)
                                                     isLoading = false
-                                                    Toast.makeText(context, "Evento creado. Código: $codigo", Toast.LENGTH_LONG).show()
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Evento creado. Código: $codigo",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
                                                     onGuardado(eventoNuevo)
                                                 }
-                                            }
-                                            .addOnFailureListener { e ->
+                                            }.addOnFailureListener { e ->
                                                 isLoading = false
-                                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error: ${e.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                     } else {
                                         // Edita el evento existente
@@ -509,8 +519,8 @@ fun DialogCrearEvento(
                                             "lugar" to lugar,
                                             "descripcion" to descripcion
                                         )
-                                        firestore.collection("eventos").document(eventoEditando.idEvento)
-                                            .update(data)
+                                        firestore.collection("eventos")
+                                            .document(eventoEditando.idEvento).update(data)
                                             .addOnSuccessListener {
                                                 val eventoActualizado = eventoEditando.copy(
                                                     nombre = nombre,
@@ -521,25 +531,30 @@ fun DialogCrearEvento(
                                                 scope.launch {
                                                     eventoDao.insertar(eventoActualizado)
                                                     isLoading = false
-                                                    Toast.makeText(context, "Evento actualizado", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Evento actualizado",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                     onGuardado(eventoActualizado)
                                                 }
-                                            }
-                                            .addOnFailureListener { e ->
+                                            }.addOnFailureListener { e ->
                                                 isLoading = false
-                                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error: ${e.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                     }
                                 }
                             }
-                        },
-                        enabled = !isLoading
+                        }, enabled = !isLoading
                     ) {
                         // Mientras que carga, se muestra el iconito de carga
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                color = Color.White, modifier = Modifier.size(20.dp)
                             )
                         } else {
                             Text(if (eventoEditando == null) "Crear" else "Guardar")

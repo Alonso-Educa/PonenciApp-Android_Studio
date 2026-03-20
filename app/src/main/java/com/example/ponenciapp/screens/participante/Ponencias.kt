@@ -78,8 +78,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
 
     LaunchedEffect(Unit) {
         // Carga el evento
-        firestore.collection("eventos").document(idEvento).get()
-            .addOnSuccessListener { doc ->
+        firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
                 evento = EventoData(
                     idEvento = doc.id,
                     nombre = doc.getString("nombre") ?: "",
@@ -97,9 +96,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
             }
 
         // Carga las ponencias
-        firestore.collection("ponencias")
-            .whereEqualTo("idEvento", idEvento)
-            .get()
+        firestore.collection("ponencias").whereEqualTo("idEvento", idEvento).get()
             .addOnSuccessListener { result ->
                 val lista = result.documents.mapNotNull { doc ->
                     try {
@@ -132,15 +129,11 @@ fun Ponencias(navController: NavController, idEvento: String) {
                     listaPonencias = listaLocal
                     if (listaLocal.isEmpty()) {
                         Toast.makeText(
-                            context,
-                            "Sin conexión y sin datos guardados",
-                            Toast.LENGTH_SHORT
+                            context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
-                            context,
-                            "Sin conexión, mostrando datos guardados",
-                            Toast.LENGTH_SHORT
+                            context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
                         ).show()
                     }
                     isLoading = false
@@ -184,8 +177,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                colors = CardDefaults.cardColors(
+                    .padding(16.dp), colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
@@ -206,8 +198,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            it.fecha,
-                            style = MaterialTheme.typography.bodyMedium
+                            it.fecha, style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     Row(
@@ -220,8 +211,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            it.lugar,
-                            style = MaterialTheme.typography.bodyMedium
+                            it.lugar, style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     if (it.descripcion.isNotBlank()) {
@@ -244,13 +234,11 @@ fun Ponencias(navController: NavController, idEvento: String) {
         ) {
             items(listaPonencias) { ponencia ->
                 TarjetaPonencia(
-                    ponencia = ponencia,
-                    onClick = {
+                    ponencia = ponencia, onClick = {
                         navController.navigate(
                             AppScreens.DetallePonencia.createRoute(ponencia.idPonencia)
                         )
-                    }
-                )
+                    })
             }
         }
     }
@@ -259,8 +247,7 @@ fun Ponencias(navController: NavController, idEvento: String) {
 // Tarjeta de ponencia
 @Composable
 fun TarjetaPonencia(
-    ponencia: PonenciaData,
-    onClick: () -> Unit
+    ponencia: PonenciaData, onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -279,10 +266,8 @@ fun TarjetaPonencia(
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        MaterialTheme.colorScheme.primary,
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                        MaterialTheme.colorScheme.primary, CircleShape
+                    ), contentAlignment = Alignment.Center
             ) {
                 Text(
                     "${ponencia.orden}",
@@ -324,9 +309,7 @@ fun TarjetaPonencia(
             }
 
             Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color.Gray
+                Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray
             )
         }
     }

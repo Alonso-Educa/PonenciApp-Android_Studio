@@ -154,27 +154,10 @@ fun PantallaPrincipal(navController: NavController) {
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+                }, colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
-                ),
-                actions = {
-                    // Botón cerrar sesión
-                    IconButton(onClick = {
-                        scope.launch {
-                            auth.signOut()
-                            navController.navigate(AppScreens.Login.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.Logout,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color.White
-                        )
-                    }
+                ), actions = {
                     // Icono circular con la inicial del usuario
                     // Al pulsar muestra un dialog con los datos del participante
                     participante?.let { usuario ->
@@ -186,8 +169,7 @@ fun PantallaPrincipal(navController: NavController) {
                                 .size(40.dp)
                                 .background(MaterialTheme.colorScheme.tertiary, CircleShape)
                                 .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                                .clickable { showCardDialog = true }
-                        ) {
+                                .clickable { showCardDialog = true }) {
                             Text(
                                 modifier = Modifier.align(Alignment.Center),
                                 text = inicial,
@@ -259,8 +241,7 @@ fun PantallaPrincipal(navController: NavController) {
                                         }
                                         Button(
                                             modifier = Modifier.padding(bottom = 16.dp),
-                                            onClick = { showCardDialog = false }
-                                        ) {
+                                            onClick = { showCardDialog = false }) {
                                             Text("Cerrar")
                                         }
                                     }
@@ -301,28 +282,26 @@ fun PantallaPrincipal(navController: NavController) {
 
                 // Participante
                 AppScreens.CheckInQR.route -> CheckInQR(
-                    idEvento = participante?.idEvento ?: "",
-                    idParticipante = uid
+                    idEvento = participante?.idEvento ?: "", idParticipante = uid
                 )
+
                 AppScreens.Ponencias.route -> Ponencias(
-                    navController = navController,
-                    idEvento = participante?.idEvento ?: ""
+                    navController = navController, idEvento = participante?.idEvento ?: ""
                 )
+
                 AppScreens.Valoracion.route -> Valoracion(
-                    idEvento = participante?.idEvento ?: "",
-                    idParticipante = uid
+                    idEvento = participante?.idEvento ?: "", idParticipante = uid
                 )
                 // Compartido por ambos
                 AppScreens.Ajustes.route -> Ajustes(
-                    participante = participante,
-                    onCerrarSesion = {
+                    participante = participante, onCerrarSesion = {
                         scope.launch {
                             auth.signOut()
                             navController.navigate(AppScreens.Login.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
-                    }
+                    }, navController
                 )
             }
         }
@@ -366,9 +345,7 @@ fun SeccionUnirseEvento(onUnido: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            "Unirse a un evento",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            "Unirse a un evento", fontSize = 24.sp, fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -402,10 +379,8 @@ fun SeccionUnirseEvento(onUnido: () -> Unit) {
 
                     else -> {
                         isLoading = true
-                        firestore.collection("eventos")
-                            .whereEqualTo("codigoEvento", codigoEvento)
-                            .get()
-                            .addOnSuccessListener { result ->
+                        firestore.collection("eventos").whereEqualTo("codigoEvento", codigoEvento)
+                            .get().addOnSuccessListener { result ->
                                 if (result.isEmpty) {
                                     isLoading = false
                                     Toast.makeText(
@@ -433,37 +408,32 @@ fun SeccionUnirseEvento(onUnido: () -> Unit) {
                                         participanteActual?.let {
                                             participanteDao.actualizar(it.copy(idEvento = idEvento))
                                         }
-                                        firestore.collection("participantes").document(uid)
-                                            .set(
-                                                mapOf("idEvento" to idEvento),
-                                                com.google.firebase.firestore.SetOptions.merge()
-                                            )
-                                        firestore.collection("eventos").document(idEvento)
-                                            .set(
-                                                mapOf("participantes" to FieldValue.arrayUnion(uid)),
-                                                com.google.firebase.firestore.SetOptions.merge()
-                                            )
-                                            .addOnSuccessListener {
-                                                isLoading = false
-                                                Toast.makeText(
-                                                    context,
-                                                    "Te has unido al evento correctamente",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                onUnido() // ← notifica a PantallaPrincipal
-                                            }
-                                            .addOnFailureListener { e ->
-                                                isLoading = false
-                                                Toast.makeText(
-                                                    context,
-                                                    "Error al unirse: ${e.message}",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
+                                        firestore.collection("participantes").document(uid).set(
+                                            mapOf("idEvento" to idEvento),
+                                            com.google.firebase.firestore.SetOptions.merge()
+                                        )
+                                        firestore.collection("eventos").document(idEvento).set(
+                                            mapOf("participantes" to FieldValue.arrayUnion(uid)),
+                                            com.google.firebase.firestore.SetOptions.merge()
+                                        ).addOnSuccessListener {
+                                            isLoading = false
+                                            Toast.makeText(
+                                                context,
+                                                "Te has unido al evento correctamente",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            onUnido() // ← notifica a PantallaPrincipal
+                                        }.addOnFailureListener { e ->
+                                            isLoading = false
+                                            Toast.makeText(
+                                                context,
+                                                "Error al unirse: ${e.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 }
-                            }
-                            .addOnFailureListener { e ->
+                            }.addOnFailureListener { e ->
                                 isLoading = false
                                 Toast.makeText(
                                     context,
@@ -473,11 +443,9 @@ fun SeccionUnirseEvento(onUnido: () -> Unit) {
                             }
                     }
                 }
-            },
-            modifier = Modifier
+            }, modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            enabled = !isLoading
+                .height(50.dp), enabled = !isLoading
         ) {
             if (isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))

@@ -128,7 +128,7 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
         cell1.cellStyle = styleData
 
         val cell2 = row.createCell(2)
-        cell2.setCellValue(if (asistencia.idPonencia!="") nombrePonencia else "")
+        cell2.setCellValue(if (asistencia.idPonencia != "") nombrePonencia else "")
         cell2.cellStyle = styleData
 
         val cell3 = row.createCell(2)
@@ -181,7 +181,7 @@ fun exportarAsistenciasPdfUI(context: Context, idEvento: String) {
     }
 }
 
-suspend fun exportarAsistenciasPdf(context: Context, idEvento: String,) {
+suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     val pdf = PdfDocument()
 
     val db = Room.databaseBuilder(
@@ -298,7 +298,9 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String,) {
             canvas.drawText("Generado el $fecha", pageWidth / 2f, y + 10f, subtitlePaint)
             y += 18f
         } else {
-            canvas.drawText("Asistencias al evento (continuación)", pageWidth / 2f, y + 18f, titlePaint)
+            canvas.drawText(
+                "Asistencias al evento (continuación)", pageWidth / 2f, y + 18f, titlePaint
+            )
             //                                                ↑ aquí es donde falla si tienes margin
             y += 28f
         }
@@ -332,12 +334,12 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String,) {
 
         val partes = asistencia.fechaHora.split(" ")
         val fecha = partes[0]  // "18/03/2026"
-        val hora  = partes[1]  // "14:35:22"
+        val hora = partes[1]  // "14:35:22"
 
         val texts = listOf(
             "${fecha}\n${hora}",
             nombreEvento,
-            if (asistencia.idPonencia!="") nombrePonencia else "",
+            if (asistencia.idPonencia != "") nombrePonencia else "",
             nombreParticipante,
             asistencia.tipo
         )

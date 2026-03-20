@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +38,7 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
+import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.EscanerQR
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -51,6 +53,7 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val firestore = FirebaseFirestore.getInstance()
+    val notificationHandler = NotificationHandler(context)
 
     // base de datos de room
     val db = remember {
@@ -181,6 +184,25 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
+//            Row(
+//                modifier = Modifier.padding(top = 32.dp),
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Button(
+//                    onClick = {
+//                        notificationHandler.enviarNotificacionConDestino("Notificacion a otra ventana", "prueba", "Valoracion")
+//                    },
+//                ){
+//                    Text("Notificacion a otra ventana")
+//                }
+//                Button(
+//                    onClick = {
+//                        notificationHandler.enviarNotificacionSimple("Notificacion a otra ventana", "prueba")
+//                    },
+//                ){
+//                    Text("Notificacion simple")
+//                }
+//            }
             // Si no se ha realizado el checkin le pide al usuario que escanee el qr
         } else {
             Icon(
