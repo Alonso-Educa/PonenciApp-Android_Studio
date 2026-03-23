@@ -10,6 +10,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room.databaseBuilder
+import com.example.ponenciapp.BuildConfig
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.MensajeData
@@ -29,7 +30,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     ).fallbackToDestructiveMigration().build()
 
     private val mensajeDao = db.mensajeDao()
-    private val apiKey = "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"
+    // Se lee la apikey desde el gradle.properties
+    private val apiKey = BuildConfig.GROQ_API_KEY
     private val api = Retrofit.Builder().baseUrl("https://api.groq.com/")
         .addConverterFactory(GsonConverterFactory.create()).build().create(GroqApi::class.java)
 

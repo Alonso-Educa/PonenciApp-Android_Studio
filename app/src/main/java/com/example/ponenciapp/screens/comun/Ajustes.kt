@@ -277,7 +277,7 @@ fun Ajustes(
         ) {
             Text(
                 "Otras opciones",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -294,6 +294,7 @@ fun Ajustes(
                 Icon(Icons.Default.Chat, contentDescription = "Chatbot")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Nuestro chatbot de soporte")
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             // Abrir la página de ayuda (aún no está hecha)
@@ -317,6 +318,7 @@ fun Ajustes(
                 Icon(Icons.Default.Logout, contentDescription = "Cerrar sesión")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Cerrar sesión")
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -340,6 +342,8 @@ fun Ajustes(
             }
         )
     }
+
+    // Dialog cambiar email
     if (showDialogCambiarEmail) {
         var nuevoEmail by remember { mutableStateOf("") }
         var passwordActual by remember { mutableStateOf("") }
