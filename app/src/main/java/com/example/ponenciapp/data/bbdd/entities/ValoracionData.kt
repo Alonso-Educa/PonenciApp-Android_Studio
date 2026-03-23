@@ -7,8 +7,9 @@ import androidx.room.PrimaryKey
 data class ValoracionData(
     @PrimaryKey val idValoracion: String,
     val idParticipante: String,
-    val idPonencia: String = "", // vacío si tipo = "evento"
-    val tipo: String,            // "evento" | "ponencia"
+    val idEvento: String,
+    val idPonencia: String = "",
+    val tipo: String,   // "evento" | "ponencia"
     val puntuacion: Int,
     val comentario: String = ""
 )

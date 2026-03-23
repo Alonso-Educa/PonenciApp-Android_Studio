@@ -210,21 +210,6 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                     )
                 }
             }, actions = {
-                // Botón cerrar sesión
-                IconButton(onClick = {
-                    scope.launch {
-                        auth.signOut()
-                        navController.navigate(AppScreens.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                }) {
-                    Icon(
-                        Icons.Default.Logout,
-                        contentDescription = "Cerrar sesión",
-                        tint = Color.White
-                    )
-                }
                 // Icono de usuario
                 organizador?.let { usuario ->
                     var showCardDialog by remember { mutableStateOf(false) }
@@ -325,7 +310,9 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Añadir ponencia", tint = Color.White)
             }
-        }) { padding ->
+        }
+    ) { padding ->
+
         // Si está cargando, muestra el iconito de carga
         if (isLoading) {
             Box(
@@ -444,45 +431,45 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Ver QR de Check-in")
                         }
-                        HorizontalDivider()
-                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Botón para generar el documento excel de asistencia
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        exportarAsistenciasExcel(
-                                            context, evento?.idEvento ?: ""
-                                        )
-                                    }
-                                }, modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                            ) {
-                                Icon(Lucide.FileSpreadsheet, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Exportar Excel de Asistencias")
-                            }
-                            // Botón para generar el documento pdf de asistencia
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        exportarAsistenciasPdf(
-                                            context, evento?.idEvento ?: ""
-                                        )
-                                    }
-                                }, modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                            ) {
-                                Icon(Lucide.File, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Exportar Excel de Asistencias")
-                            }
-                        }
+//                        HorizontalDivider()
+//                        Spacer(modifier = Modifier.height(8.dp))
+//                        Row(
+//                            horizontalArrangement = Arrangement.SpaceBetween
+//                        ) {
+//                            // Botón para generar el documento excel de asistencia
+//                            Button(
+//                                onClick = {
+//                                    scope.launch {
+//                                        exportarAsistenciasExcel(
+//                                            context, evento?.idEvento ?: ""
+//                                        )
+//                                    }
+//                                }, modifier = Modifier
+//                                    .weight(1f)
+//                                    .fillMaxWidth()
+//                            ) {
+//                                Icon(Lucide.FileSpreadsheet, contentDescription = null)
+//                                Spacer(modifier = Modifier.width(8.dp))
+//                                Text("Exportar Excel de Asistencias")
+//                            }
+//                            // Botón para generar el documento pdf de asistencia
+//                            Button(
+//                                onClick = {
+//                                    scope.launch {
+//                                        exportarAsistenciasPdf(
+//                                            context, evento?.idEvento ?: ""
+//                                        )
+//                                    }
+//                                }, modifier = Modifier
+//                                    .weight(1f)
+//                                    .fillMaxWidth()
+//                            ) {
+//                                Icon(Lucide.File, contentDescription = null)
+//                                Spacer(modifier = Modifier.width(8.dp))
+//                                Text("Exportar Excel de Asistencias")
+//                            }
+//                        }
                     }
                 }
             }

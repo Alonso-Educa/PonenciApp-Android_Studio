@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
+import com.example.ponenciapp.data.bbdd.entities.EventoData
+import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.data.bbdd.entities.ValoracionData
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -59,16 +63,76 @@ fun Valoracion(idEvento: String, idParticipante: String) {
     }
 
     val valoracionDao = db.valoracionDao()
+    val ponenciaDao = db.ponenciaDao()
+    val eventoDao = db.eventoDao()
 
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
 
     // Valoración general del evento
+    var evento by remember { mutableStateOf<EventoData?>(null) }
     var puntuacionEvento by remember { mutableIntStateOf(0) }
     var comentarioEvento by remember { mutableStateOf("") }
 
-    // Si ya existe valoración previa, la carga
+    // Valoraciones de las ponencias
+    var listaPonencias by remember { mutableStateOf<List<PonenciaData>>(emptyList()) }
+    var puntuacionesPonencias by remember { mutableStateOf(mapOf<String, Int>()) }
+
     LaunchedEffect(Unit) {
+        // Carga el evento desde firebase
+        firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
+            evento = EventoData(
+                idEvento = doc.id,
+                nombre = doc.getString("nombre") ?: "",
+                fecha = doc.getString("fecha") ?: "",
+                lugar = doc.getString("lugar") ?: "",
+                descripcion = doc.getString("descripcion") ?: "",
+                contrasena = doc.getString("contrasena") ?: "",
+                codigoEvento = doc.getString("codigoEvento") ?: ""
+            )
+            scope.launch { evento?.let { eventoDao.insertar(it) } }
+        }.addOnFailureListener {
+            scope.launch {
+                evento = eventoDao.getEventoPorId(idEvento)
+            }
+        }
+
+        // Carga las ponencias del evento desde firebase
+        firestore.collection("ponencias").whereEqualTo("idEvento", idEvento).get()
+            .addOnSuccessListener { result ->
+                val lista = result.documents.mapNotNull { doc ->
+                    try {
+                        PonenciaData(
+                            idPonencia = doc.id,
+                            titulo = doc.getString("titulo") ?: "",
+                            ponente = doc.getString("ponente") ?: "",
+                            descripcion = doc.getString("descripcion") ?: "",
+                            horaInicio = doc.getString("horaInicio") ?: "",
+                            horaFin = doc.getString("horaFin") ?: "",
+                            qrCode = doc.getString("qrCode") ?: "",
+                            idEvento = idEvento,
+                            orden = doc.getLong("orden")?.toInt() ?: 0
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }.sortedBy { it.orden }
+                scope.launch {
+                    ponenciaDao.insertarTodas(lista)
+                    listaPonencias = lista
+                    isLoading = false
+                }
+            }.addOnFailureListener {
+                scope.launch {
+                    listaPonencias = ponenciaDao.getPonenciasDeEvento(idEvento)
+                    isLoading = false
+                    Toast.makeText(
+                        context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+        // Si ya existe valoración previa del evento, la carga
         firestore.collection("valoraciones").whereEqualTo("idParticipante", idParticipante)
             .whereEqualTo("idEvento", idEvento).whereEqualTo("tipo", "evento").get()
             .addOnSuccessListener { result ->
@@ -77,10 +141,26 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                     puntuacionEvento = doc.getLong("puntuacion")?.toInt() ?: 0
                     comentarioEvento = doc.getString("comentario") ?: ""
                 }
-                isLoading = false  // ← añadir aquí
+                isLoading = false
             }.addOnFailureListener {
-                isLoading = false  // ← añadir aquí
+                isLoading = false
             }
+
+        // Si ya existe valoración previa de las ponencias, las carga
+        firestore.collection("valoraciones")
+            .whereEqualTo("idParticipante", idParticipante)
+            .whereEqualTo("idEvento", idEvento)
+            .whereEqualTo("tipo", "ponencia")
+            .get()
+            .addOnSuccessListener { result ->
+                val mapa = result.documents.associate { doc ->
+                    (doc.getString("idPonencia") ?: "") to
+                            (doc.getLong("puntuacion")?.toInt() ?: 0)
+                }
+                puntuacionesPonencias = mapa
+                isLoading = false
+            }
+            .addOnFailureListener { isLoading = false }
     }
 
     if (isLoading) {
@@ -90,57 +170,100 @@ fun Valoracion(idEvento: String, idParticipante: String) {
         return
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            "Valoración", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
-        )
+        item{
+            Text(
+                "Valoración del evento", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
+            )
+        }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        item{
+            Card(
+                modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Text(
-                    "Valoración general del evento",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "¿Cómo valorarías el evento en general?",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-                SelectorEstrellas(
-                    puntuacion = puntuacionEvento, onPuntuacionChange = { puntuacionEvento = it })
-                OutlinedTextField(
-                    value = comentarioEvento,
-                    onValueChange = { comentarioEvento = it },
-                    label = { Text("Comentario (opcional)") },
-                    maxLines = 4,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Valoración general del evento ${evento?.nombre}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "¿Cómo valorarías el evento en general?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    SelectorEstrellas(
+                        puntuacion = puntuacionEvento, onPuntuacionChange = { puntuacionEvento = it })
+                    OutlinedTextField(
+                        value = comentarioEvento,
+                        onValueChange = { comentarioEvento = it },
+                        label = { Text("Comentario (opcional)") },
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 
-        Button(
-            onClick = {
-                if (puntuacionEvento == 0) {
-                    Toast.makeText(
-                        context, "Introduce una puntuación del evento", Toast.LENGTH_SHORT
-                    ).show()
-                    return@Button
+        item{
+            Text(
+                "Valoración de las ponencias (opcional)", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
+            )
+        }
+
+        items(listaPonencias) { ponencia ->
+            Card(
+                modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "Valoración general de la ponencia ${ponencia.titulo}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "¿Cómo valorarías la ponencia en general?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                    SelectorEstrellas(
+                        puntuacion = puntuacionesPonencias[ponencia.idPonencia] ?: 0,
+                        onPuntuacionChange = { nuevaPuntuacion ->
+                            puntuacionesPonencias = puntuacionesPonencias.toMutableMap().apply {
+                                put(ponencia.idPonencia, nuevaPuntuacion)
+                            }
+                        }
+                    )
                 }
-                isSaving = true
-                val idValoracion = "${idParticipante}_${idEvento}_evento"
-                firestore.collection("valoraciones").document(idValoracion).set(
+            }
+        }
+
+        item{
+            Button(
+                onClick = {
+                    // Solo se comprueba la valoración del evento
+                    if (puntuacionEvento == 0) {
+                        Toast.makeText(
+                            context, "Introduce una puntuación del evento", Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+                    isSaving = true
+
+                    // Guarda la valoración del evento
+                    val idValoracion = "${idParticipante}_${idEvento}_evento"
+                    firestore.collection("valoraciones").document(idValoracion).set(
                         mapOf(
                             "idValoracion" to idValoracion,
                             "idParticipante" to idParticipante,
@@ -156,6 +279,7 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                                 ValoracionData(
                                     idValoracion = idValoracion,
                                     idParticipante = idParticipante,
+                                    idEvento = idEvento,
                                     idPonencia = "",
                                     tipo = "evento",
                                     puntuacion = puntuacionEvento,
@@ -173,14 +297,56 @@ fun Valoracion(idEvento: String, idParticipante: String) {
                             context, "Error guardando valoración: ${e.message}", Toast.LENGTH_SHORT
                         ).show()
                     }
-            }, modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp), enabled = !isSaving
-        ) {
-            if (isSaving) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-            } else {
-                Text("Guardar valoración")
+
+                    // Guarda la valoración de las ponencias
+                    for (ponencia in listaPonencias){
+                        // Solo guarda la valoración de las ponencias que tienen valoración
+                        if (puntuacionesPonencias[ponencia.idPonencia] == null) continue
+                        val idValoracionPonencia = "${idParticipante}_${idEvento}_${ponencia.idPonencia}_ponencia"
+                        firestore.collection("valoraciones").document(idValoracionPonencia).set(
+                            mapOf(
+                                "idValoracion" to idValoracionPonencia,
+                                "idParticipante" to idParticipante,
+                                "idEvento" to idEvento,
+                                "idPonencia" to ponencia.idPonencia,
+                                "tipo" to "ponencia",
+                                "puntuacion" to (puntuacionesPonencias[ponencia.idPonencia] ?: 0),
+                                "comentario" to ""
+                            )
+                        ).addOnSuccessListener {
+                            scope.launch {
+                                valoracionDao.insertar(
+                                    ValoracionData(
+                                        idValoracion = idValoracionPonencia,
+                                        idParticipante = idParticipante,
+                                        idEvento = idEvento,
+                                        idPonencia = ponencia.idPonencia,
+                                        tipo = "ponencia",
+                                        puntuacion = (puntuacionesPonencias[ponencia.idPonencia] ?: 0),
+                                        comentario = ""
+                                    )
+                                )
+                                isSaving = false
+                                Toast.makeText(
+                                    context, "Valoración guardada correctamente", Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }.addOnFailureListener { e ->
+                            isSaving = false
+                            Toast.makeText(
+                                context, "Error guardando valoración: ${e.message}", Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }, modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp), enabled = !isSaving
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Guardar valoración")
+                }
             }
         }
     }

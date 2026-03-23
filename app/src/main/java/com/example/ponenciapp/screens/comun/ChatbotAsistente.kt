@@ -1,4 +1,4 @@
-package com.example.ponenciapp.screens.participante
+package com.example.ponenciapp.screens.comun
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -46,7 +45,6 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -105,12 +103,14 @@ import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.chatbot.ChatViewModel
 import com.example.ponenciapp.chatbot.Mensaje
-import com.example.ponenciapp.navigation.AppScreens
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.text.input.ImeAction
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -453,6 +453,7 @@ fun PantallaChat(
             }
 
             // Botón de acción flotante arriba del row
+            // usar androidx.compose.animation.AnimatedVisibility porque lo confunde con el de columnas
             androidx.compose.animation.AnimatedVisibility(
                 visible = !estaAbajo,
                 enter = fadeIn() + scaleIn(),
@@ -505,7 +506,7 @@ fun PantallaChat(
                         disabledIndicatorColor = Color.Transparent
                     ),
                     keyboardOptions = KeyboardOptions(
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Send
+                        imeAction = ImeAction.Send
                     ),
                     keyboardActions = KeyboardActions(
                         onSend = {
@@ -557,8 +558,8 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit) {
     val isUser = mensaje.rol == "user"
     val clipboardManager = LocalClipboardManager.current
     val hora = remember(mensaje.fecha) {
-        java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(mensaje.fecha))
+        SimpleDateFormat("HH:mm", Locale.getDefault())
+            .format(Date(mensaje.fecha))
     }
 
 //    onLongClick = {
