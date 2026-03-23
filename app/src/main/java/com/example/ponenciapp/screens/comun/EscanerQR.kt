@@ -99,7 +99,7 @@ fun EscanerQR(
         return
     }
 
-    // SAbre la cámaraa si tiene permiso
+    // Abre la cámara si tiene permiso
     Box(modifier = modifier.fillMaxSize()) {
         // Vista de la cámara
         AndroidView(

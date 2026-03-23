@@ -37,8 +37,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.room.Room
@@ -62,7 +66,11 @@ import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
+import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.screens.comun.BottomBarOrganizador
+import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
+import com.example.ponenciapp.screens.comun.IconoUsuario
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -72,6 +80,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisEventos(navController: NavController) {
 
@@ -87,6 +96,9 @@ fun MisEventos(navController: NavController) {
     }
 
     val eventoDao = db.eventoDao()
+    val participanteDao = db.participanteDao()
+
+    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
 
     var listaEventos by remember { mutableStateOf<List<EventoData>>(emptyList()) }
     var showDialogCrear by remember { mutableStateOf(false) }
@@ -96,6 +108,10 @@ fun MisEventos(navController: NavController) {
 
     // Cargar eventos del organizador
     LaunchedEffect(Unit) {
+        // Carga el participante desde Room
+        participante = participanteDao.getParticipantePorId(uid)
+
+        // Carga los eventos del organizador
         firestore.collection("eventos").whereEqualTo("idOrganizador", uid).get()
             .addOnSuccessListener { result ->
                 val lista = result.documents.mapNotNull { doc ->
@@ -135,195 +151,231 @@ fun MisEventos(navController: NavController) {
             }
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Mis Eventos",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ),
+                actions = {
+                    participante?.let { IconoUsuario(participante = it) }
+                }
+            )
+        },
+        bottomBar = {
+            // Muestra BottomBar de organizador
+            BottomBarOrganizador(
+                navController = navController,
+                rutaActual = AppScreens.MisEventos.route
+            )
         }
-        return
-    }
+    ) { padding ->
 
-    // Contenido de la pantalla
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Si no hay eventos, mostrar mensaje de ayuda
-        if (listaEventos.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Default.Event,
-                    contentDescription = "Evento",
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "No tienes eventos creados",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Pulsa el botón + para crear uno",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
+        // Si está cargando muestra el iconito de carga
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
-        } else {
-            // Si hay eventos, mostrarlos en una lista
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(listaEventos) { evento ->
-                    // Tarjeta de evento
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .clickable {
-                                navController.navigate(
-                                    AppScreens.DetalleEvento.createRoute(evento.idEvento)
-                                )
-                            }, elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Row(
+            return@Scaffold
+        }
+
+        // Contenido de la pantalla
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Si no hay eventos, mostrar mensaje de ayuda
+            if (listaEventos.isEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Event,
+                        contentDescription = "Evento",
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No tienes eventos creados",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Pulsa el botón + para crear uno",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                // Si hay eventos, mostrarlos en una lista
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    items(listaEventos) { evento ->
+                        // Tarjeta de evento
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .clickable {
+                                    navController.navigate(
+                                        AppScreens.DetalleEvento.createRoute(evento.idEvento)
+                                    )
+                                }, elevation = CardDefaults.cardElevation(4.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    evento.nombre,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Lucide.CalendarDays,
-                                        contentDescription = "Fecha de inicio",
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        " ${evento.fecha}",
+                                        evento.nombre,
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Lucide.CalendarDays,
+                                            contentDescription = "Fecha de inicio",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            " ${evento.fecha}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.Gray,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = "Lugar de localización",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            " ${evento.lugar}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.Gray,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Text(
+                                        "Código: ${evento.codigoEvento}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.LocationOn,
-                                        contentDescription = "Lugar de localización",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        " ${evento.lugar}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Text(
-                                    "Código: ${evento.codigoEvento}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            // Editar / Eliminar
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                IconButton(onClick = {
-                                    eventoEditando = evento
-                                    showDialogCrear = true
-                                }) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                }
-                                IconButton(onClick = {
-                                    eventoEditando = evento
-                                    showDialogEliminar = true
-                                }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Eliminar",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
+                                // Editar / Eliminar
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    IconButton(onClick = {
+                                        eventoEditando = evento
+                                        showDialogCrear = true
+                                    }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar")
+                                    }
+                                    IconButton(onClick = {
+                                        eventoEditando = evento
+                                        showDialogEliminar = true
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Eliminar",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // FAB para crear un nuevo evento
-        FloatingActionButton(
-            onClick = {
-                eventoEditando = null
-                showDialogCrear = true
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primary
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Crear evento", tint = Color.White)
-        }
-    }
-
-    // Dialog para crear o editar evento
-    if (showDialogCrear) {
-        DialogCrearEvento(eventoEditando = eventoEditando, idOrganizador = uid, onDismiss = {
-            showDialogCrear = false
-            eventoEditando = null
-        }, onGuardado = { eventoNuevo ->
-            listaEventos = if (eventoEditando == null) {
-                listaEventos + eventoNuevo
-            } else {
-                listaEventos.map { if (it.idEvento == eventoNuevo.idEvento) eventoNuevo else it }
+            // FAB para crear un nuevo evento
+            FloatingActionButton(
+                onClick = {
+                    eventoEditando = null
+                    showDialogCrear = true
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Crear evento", tint = Color.White)
             }
-            showDialogCrear = false
-            eventoEditando = null
-        })
-    }
+        }
 
-    // Dialog para confirmar la eliminación del evento
-    if (showDialogEliminar && eventoEditando != null) {
-        AlertDialog(
-            onDismissRequest = {
-            showDialogEliminar = false
-            eventoEditando = null
-        },
-            icon = { Icon(Icons.Default.Warning, contentDescription = null) },
-            title = { Text("Eliminar evento") },
-            text = { Text("¿Deseas eliminar el evento \"${eventoEditando!!.nombre}\"? Esta acción no se puede deshacer.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    scope.launch {
-                        val id = eventoEditando!!.idEvento
-                        eventoDao.eliminar(id)
-                        firestore.collection("eventos").document(id).delete()
-                        listaEventos = listaEventos.filter { it.idEvento != id }
-                        showDialogEliminar = false
-                        eventoEditando = null
-                        Toast.makeText(context, "Evento eliminado", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+        // Dialog para crear o editar evento
+        if (showDialogCrear) {
+            DialogCrearEvento(eventoEditando = eventoEditando, idOrganizador = uid, onDismiss = {
+                showDialogCrear = false
+                eventoEditando = null
+            }, onGuardado = { eventoNuevo ->
+                listaEventos = if (eventoEditando == null) {
+                    listaEventos + eventoNuevo
+                } else {
+                    listaEventos.map { if (it.idEvento == eventoNuevo.idEvento) eventoNuevo else it }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = {
+                showDialogCrear = false
+                eventoEditando = null
+            })
+        }
+
+        // Dialog para confirmar la eliminación del evento
+        if (showDialogEliminar && eventoEditando != null) {
+            AlertDialog(
+                onDismissRequest = {
                     showDialogEliminar = false
                     eventoEditando = null
-                }) { Text("Cancelar") }
-            })
+                },
+                icon = { Icon(Icons.Default.Warning, contentDescription = null) },
+                title = { Text("Eliminar evento") },
+                text = { Text("¿Deseas eliminar el evento \"${eventoEditando!!.nombre}\"? Esta acción no se puede deshacer.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch {
+                            val id = eventoEditando!!.idEvento
+                            eventoDao.eliminar(id)
+                            firestore.collection("eventos").document(id).delete()
+                            listaEventos = listaEventos.filter { it.idEvento != id }
+                            showDialogEliminar = false
+                            eventoEditando = null
+                            Toast.makeText(context, "Evento eliminado", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDialogEliminar = false
+                        eventoEditando = null
+                    }) { Text("Cancelar") }
+                })
+        }
     }
 }
 

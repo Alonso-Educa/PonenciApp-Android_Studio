@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
@@ -64,6 +65,7 @@ import com.example.ponenciapp.data.bbdd.entities.EventoData
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.screens.organizador.DialogMostrarQR
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -71,7 +73,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetallePonencia(navController: NavController, idPonencia: String) {
+fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String) {
 
     // variables de estado
     val context = LocalContext.current
@@ -91,30 +93,21 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
     val ponenciaDao = db.ponenciaDao()
     val participanteDao = db.participanteDao()
 
+    // variables de estado
     var ponencia by remember { mutableStateOf<PonenciaData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
     var evento by remember { mutableStateOf<EventoData?>(null) }
+    var showQREvento by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         // carga el participante desde room
         participante = participanteDao.getParticipantePorId(uid)
 
-        // Carga sus ponencias desde firebase
-        firestore.collection("ponencias").document(idPonencia).get().addOnSuccessListener { doc ->
-                ponencia = PonenciaData(
-                    idPonencia = doc.id,
-                    titulo = doc.getString("titulo") ?: "",
-                    ponente = doc.getString("ponente") ?: "",
-                    descripcion = doc.getString("descripcion") ?: "",
-                    horaInicio = doc.getString("horaInicio") ?: "",
-                    horaFin = doc.getString("horaFin") ?: "",
-                    qrCode = doc.getString("qrCode") ?: "",
-                    idEvento = doc.getString("idEvento") ?: "",
-                    orden = doc.getLong("orden")?.toInt() ?: 0
-                )
-
-                // Carga el evento desde firebase
+        // carga la ponencia desde firebase
+        firestore.collection("ponencias").document(idPonencia).get()
+            .addOnSuccessListener { doc ->
+                // Añadir dentro del addOnSuccessListener de la ponencia
                 val idEvento = doc.getString("idEvento") ?: ""
                 if (idEvento.isNotEmpty()) {
                     firestore.collection("eventos").document(idEvento).get()
@@ -130,26 +123,28 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
                             )
                         }
                 }
-
+                ponencia = PonenciaData(
+                    idPonencia = doc.id,
+                    titulo = doc.getString("titulo") ?: "",
+                    ponente = doc.getString("ponente") ?: "",
+                    descripcion = doc.getString("descripcion") ?: "",
+                    horaInicio = doc.getString("horaInicio") ?: "",
+                    horaFin = doc.getString("horaFin") ?: "",
+                    qrCode = doc.getString("qrCode") ?: "",
+                    idEvento = doc.getString("idEvento") ?: "",
+                    orden = doc.getLong("orden")?.toInt() ?: 0
+                )
                 scope.launch {
-                    ponencia?.let { ponenciaDao.insertar(it) }
+                    ponenciaDao.insertar(ponencia!!)
                     isLoading = false
                 }
-            }
-            // Si firebase falla se cargan los datos desde room
-            .addOnFailureListener {
+            }.addOnFailureListener {
                 scope.launch {
                     ponencia = ponenciaDao.getPonenciaPorId(idPonencia)
-                    if (ponencia == null) {
-                        Toast.makeText(
-                            context, "Sin conexión y sin datos guardados", Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Toast.makeText(
-                            context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
-                        ).show()
-                    }
                     isLoading = false
+                    Toast.makeText(
+                        context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
     }
@@ -158,127 +153,118 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
         topBar = {
             TopAppBar(
                 title = {
-                Text(
-                    text = ponencia?.titulo ?: "Detalle",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp
-                    //modifier = Modifier.padding(end = 48.dp)
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = Color.White
-            ), navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Atrás",
-                        tint = Color.White
+                    Text(
+                        text = ponencia?.titulo ?: "Detalle de ponencia",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
+                        //modifier = Modifier.padding(end = 48.dp)
                     )
-                }
-            }, actions = {
-                // Botón cerrar sesión
-                IconButton(onClick = {
-                    scope.launch {
-                        auth.signOut()
-                        navController.navigate(AppScreens.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                }) {
-                    Icon(
-                        Icons.Default.Logout,
-                        contentDescription = "Cerrar sesión",
-                        tint = Color.White
-                    )
-                }
-                // Icono de usuario
-                participante?.let { usuario ->
-                    var showCardDialog by remember { mutableStateOf(false) }
-                    val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.tertiary, CircleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                            .clickable { showCardDialog = true }) {
-                        Text(
-                            modifier = Modifier.align(Alignment.Center),
-                            text = inicial,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
+                }, colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ), navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Atrás",
+                            tint = Color.White
                         )
                     }
+                }, actions = {
+                    // Icono de usuario
+                    participante?.let { usuario ->
+                        var showCardDialog by remember { mutableStateOf(false) }
+                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
 
-                    if (showCardDialog) {
-                        Dialog(onDismissRequest = { showCardDialog = false }) {
-                            Card(
-                                shape = MaterialTheme.shapes.large,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.cardElevation(8.dp),
-                                modifier = Modifier.padding(10.dp)
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
+                                .clickable { showCardDialog = true }) {
+                            Text(
+                                modifier = Modifier.align(Alignment.Center),
+                                text = inicial,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                        }
+
+                        // Dialog con los datos del participante
+                        if (showCardDialog) {
+                            Dialog(onDismissRequest = { showCardDialog = false }) {
+                                Card(
+                                    shape = MaterialTheme.shapes.large,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    elevation = CardDefaults.cardElevation(8.dp),
+                                    modifier = Modifier.padding(10.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .padding(16.dp)
-                                            .widthIn(min = 200.dp, max = 300.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Box(
+                                        Row(
                                             modifier = Modifier
-                                                .size(60.dp)
-                                                .background(
-                                                    MaterialTheme.colorScheme.tertiary, CircleShape
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    MaterialTheme.colorScheme.secondary,
-                                                    CircleShape
-                                                )
+                                                .padding(16.dp)
+                                                .widthIn(min = 200.dp, max = 300.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(
-                                                modifier = Modifier.align(Alignment.Center),
-                                                text = inicial,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = Color.White
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(60.dp)
+                                                    .background(
+                                                        MaterialTheme.colorScheme.tertiary,
+                                                        CircleShape
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        MaterialTheme.colorScheme.secondary,
+                                                        CircleShape
+                                                    )
+                                            ) {
+                                                Text(
+                                                    modifier = Modifier.align(Alignment.Center),
+                                                    text = inicial,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = Color.White
+                                                )
+                                            }
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Text(
+                                                    "${usuario.nombre} ${usuario.apellidos}",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    "Email: ${usuario.emailEduca}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Centro: ${usuario.centro} - ${usuario.codigoCentro}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    "Rol: ${usuario.rol}",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
                                         }
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(
-                                                "${usuario.nombre} ${usuario.apellidos}",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Text(
-                                                "Email: ${usuario.emailEduca}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                "Centro: ${usuario.centro}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
+                                        Button(
+                                            modifier = Modifier.padding(bottom = 16.dp),
+                                            onClick = { showCardDialog = false }) {
+                                            Text("Cerrar")
                                         }
-                                    }
-                                    Button(
-                                        modifier = Modifier.padding(bottom = 16.dp),
-                                        onClick = { showCardDialog = false }) {
-                                        Text("Cerrar")
                                     }
                                 }
                             }
                         }
                     }
-                }
-            })
+                })
         }) { padding ->
 
         // Si está cargando muestra el iconito de carga
@@ -417,22 +403,25 @@ fun DetallePonencia(navController: NavController, idPonencia: String) {
 
                 HorizontalDivider()
 
-                // Botón QR asistencia — por implementar
+                // Botón para generar el QR del evento
                 Button(
-                    onClick = {
-                        // TODO: implementar el escaner de cada ponencia individual
-                        Toast.makeText(
-                            context, "Escáner QR aún no implementado", Toast.LENGTH_SHORT
-                        ).show()
-                    }, modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
+                    onClick = { showQREvento = true }, modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Icon(Icons.Default.QrCode, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Registrar asistencia a esta ponencia")
+                    Text("Ver QR de Check-in")
                 }
             }
+        }
+    }
+
+    if (showQREvento) {
+        evento?.let {
+            DialogMostrarQR(
+                titulo = "QR Check-in — ${it.nombre} — ${ponencia?.titulo}",
+                contenidoQR = "checkin:${it.idEvento}:${ponencia?.idPonencia}",
+                onDismiss = { showQREvento = false }
+            )
         }
     }
 }

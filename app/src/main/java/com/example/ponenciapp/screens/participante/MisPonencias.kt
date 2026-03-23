@@ -27,9 +27,13 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,23 +47,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
+import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.screens.comun.BottomBarParticipante
+import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Ponencias(navController: NavController, idEvento: String) {
+fun MisPonencias(navController: NavController) {
 
     // variables de estado
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val firestore = FirebaseFirestore.getInstance()
+    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     // base de datos de room
     val db = remember {
@@ -68,28 +79,33 @@ fun Ponencias(navController: NavController, idEvento: String) {
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
 
+    val participanteDao = db.participanteDao()
     val ponenciaDao = db.ponenciaDao()
     val eventoDao = db.eventoDao()
 
+    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
     var listaPonencias by remember { mutableStateOf<List<PonenciaData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
     var evento by remember { mutableStateOf<EventoData?>(null) }
 
     LaunchedEffect(Unit) {
+        // Carga el participante desde Room
+        participante = participanteDao.getParticipantePorId(uid)
+        val idEvento = participante?.idEvento ?: ""
         // Carga el evento
         firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
-                evento = EventoData(
-                    idEvento = doc.id,
-                    nombre = doc.getString("nombre") ?: "",
-                    fecha = doc.getString("fecha") ?: "",
-                    lugar = doc.getString("lugar") ?: "",
-                    descripcion = doc.getString("descripcion") ?: "",
-                    contrasena = doc.getString("contrasena") ?: "",
-                    codigoEvento = doc.getString("codigoEvento") ?: ""
-                )
-                scope.launch { eventoDao.insertar(evento!!) }
-            }
+            evento = EventoData(
+                idEvento = doc.id,
+                nombre = doc.getString("nombre") ?: "",
+                fecha = doc.getString("fecha") ?: "",
+                lugar = doc.getString("lugar") ?: "",
+                descripcion = doc.getString("descripcion") ?: "",
+                contrasena = doc.getString("contrasena") ?: "",
+                codigoEvento = doc.getString("codigoEvento") ?: ""
+            )
+            scope.launch { eventoDao.insertar(evento!!) }
+        }
             // Si firebase falla se cargan los datos desde room
             .addOnFailureListener {
                 scope.launch { evento = eventoDao.getEventoPorId(idEvento) }
@@ -141,104 +157,134 @@ fun Ponencias(navController: NavController, idEvento: String) {
             }
     }
 
-    // Si está cargando muestra el iconito de carga
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
-    // Si no hay ponencias muestra un mensaje
-    if (listaPonencias.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.EventNote,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "No hay ponencias disponibles",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.Gray
-                )
-            }
-        }
-        return
-    }
-
-    // Sino, muestra la lista de ponencias
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Tarjeta con la información del evento
-        evento?.let {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp), colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Column {
+                    Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        it.nombre,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        "Mis Ponencias",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.CalendarMonth,
-                            contentDescription = "Fecha",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                } },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ),
+                actions = {
+                    participante?.let { IconoUsuario(participante = it) }
+                }
+            )
+        },
+        bottomBar = {
+            BottomBarParticipante(
+                navController = navController,
+                rutaActual = AppScreens.Ponencias.route
+            )
+        }
+    ) { padding ->
+
+        // Si está cargando muestra el iconito de carga
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        // Si no hay ponencias muestra un mensaje
+        if (listaPonencias.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.EventNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No hay ponencias disponibles",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+            return@Scaffold
+        }
+
+        // Sino, muestra la lista de ponencias
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Tarjeta con la información del evento
+            evento?.let {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp), colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            it.fecha, style = MaterialTheme.typography.bodyMedium
+                            it.nombre,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = "Lugar",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            it.lugar, style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (it.descripcion.isNotBlank()) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            it.descripcion,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.CalendarMonth,
+                                contentDescription = "Fecha",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                it.fecha, style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = "Lugar",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                it.lugar, style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        if (it.descripcion.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                it.descripcion,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        // Lista de ponencias
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(listaPonencias) { ponencia ->
-                TarjetaPonencia(
-                    ponencia = ponencia, onClick = {
-                        navController.navigate(
-                            AppScreens.DetallePonencia.createRoute(ponencia.idPonencia)
-                        )
-                    })
+            // Lista de ponencias
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(listaPonencias) { ponencia ->
+                    TarjetaPonencia(
+                        ponencia = ponencia, onClick = {
+                            navController.navigate(
+                                AppScreens.DetallePonenciaParticipante.createRoute(ponencia.idPonencia)
+                            )
+                        }
+                    )
+                }
             }
         }
     }

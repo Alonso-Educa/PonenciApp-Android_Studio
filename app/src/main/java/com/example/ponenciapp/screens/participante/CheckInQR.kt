@@ -17,9 +17,13 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,25 +38,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
+import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
+import com.example.ponenciapp.screens.comun.BottomBarParticipante
+import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
 import com.example.ponenciapp.screens.comun.EscanerQR
+import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CheckInQR(idEvento: String, idParticipante: String) {
+fun CheckInQR(navController: NavController) {
 
     // Variables usadas
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val firestore = FirebaseFirestore.getInstance()
+    val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val notificationHandler = NotificationHandler(context)
 
     // base de datos de room
@@ -63,13 +77,22 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
     }
 
     val asistenciaDao = db.asistenciaDao()
+    val participanteDao = db.participanteDao()
+
+    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var idEvento by remember { mutableStateOf("") }
+    var idParticipante by remember { mutableStateOf("") }
 
     var checkInRealizado by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var escaneando by remember { mutableStateOf(false) }
 
-    // Comprobar si ya hizo check-in
+    // Cargar participante y comprobar si ya hizo check-in
     LaunchedEffect(Unit) {
+        participante = participanteDao.getParticipantePorId(uid)
+        idEvento = participante?.idEvento ?: ""
+        idParticipante = participante?.idParticipante ?: ""
+
         firestore.collection("asistencias")
             .whereEqualTo("idParticipante", idParticipante)
             .whereEqualTo("idEvento", idEvento)
@@ -87,12 +110,43 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
             }
     }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Realizar Check-in",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ),
+                actions = {
+                    participante?.let { IconoUsuario(participante = it) }
+                }
+            )
+        },
+        bottomBar = {
+            // Muestra BottomBar con Unirse + Ajustes
+            BottomBarParticipante(
+                navController = navController,
+                rutaActual = AppScreens.CheckInQR.route
+            )
+        }
+    ) { padding ->
+
     // Si está cargando muestra el iconito de carga
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-        return
+        return@Scaffold
     }
 
     // Pantalla del escáner
@@ -109,7 +163,7 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                             "idEvento" to idEvento,
                             "idPonencia" to "",
                             "tipo" to "checkin",
-                            "fechaHora" to formatearFechaHora() // TODO
+                            "fechaHora" to formatearFechaHora()
                         ))
                         .addOnSuccessListener {
                             scope.launch {
@@ -151,13 +205,14 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
             },
             onCancelar = { escaneando = false }
         )
-        return
+        return@Scaffold
     }
 
     // Pantalla principal
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(padding)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -184,25 +239,6 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
-//            Row(
-//                modifier = Modifier.padding(top = 32.dp),
-//                horizontalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                Button(
-//                    onClick = {
-//                        notificationHandler.enviarNotificacionConDestino("Notificacion a otra ventana", "prueba", "Valoracion")
-//                    },
-//                ){
-//                    Text("Notificacion a otra ventana")
-//                }
-//                Button(
-//                    onClick = {
-//                        notificationHandler.enviarNotificacionSimple("Notificacion a otra ventana", "prueba")
-//                    },
-//                ){
-//                    Text("Notificacion simple")
-//                }
-//            }
             // Si no se ha realizado el checkin le pide al usuario que escanee el qr
         } else {
             Icon(
@@ -230,6 +266,7 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
                 onClick = { escaneando = true },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(padding)
                     .height(50.dp)
             ) {
                 Icon(Icons.Default.QrCodeScanner, contentDescription = null)
@@ -238,7 +275,7 @@ fun CheckInQR(idEvento: String, idParticipante: String) {
             }
         }
     }
-}
+}}
 
 fun formatearFechaHora(): String {
     val sdfCompleto = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())

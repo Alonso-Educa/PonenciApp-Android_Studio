@@ -10,7 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ponenciapp.screens.*
+import com.example.ponenciapp.screens.Login
+import com.example.ponenciapp.screens.PantallaPrincipal
 import com.example.ponenciapp.screens.comun.*
 import com.example.ponenciapp.screens.organizador.*
 import com.example.ponenciapp.screens.participante.*
@@ -22,7 +23,6 @@ fun AppNavigation(destinoNotificacion: String? = null) {
     val context = LocalContext.current
     val auth = Firebase.auth
 
-    // Comprueba si hay una sesión iniciada y define la pantalla de inicio
     val startDestination = if (auth.currentUser != null) {
         AppScreens.PantallaPrincipal.route
     } else {
@@ -31,7 +31,6 @@ fun AppNavigation(destinoNotificacion: String? = null) {
 
     val navController = rememberNavController()
 
-    // Navega a la pantalla de destino
     LaunchedEffect(destinoNotificacion) {
         if (destinoNotificacion != null && AppScreens.fromRoute(destinoNotificacion) != null) {
             navController.navigate(destinoNotificacion) {
@@ -40,25 +39,53 @@ fun AppNavigation(destinoNotificacion: String? = null) {
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = startDestination
-    ) {
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(AppScreens.Login.route) {
             Login(navController)
         }
+        // Router — no tiene UI propia, solo redirige
         composable(AppScreens.PantallaPrincipal.route) {
-            BackHandler(true) {
-                Toast.makeText(
-                    context,
-                    "Usa el botón de cerrar sesión para salir",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
             PantallaPrincipal(navController)
         }
+        // Pantallas con BackHandler
         composable(AppScreens.UnirseEvento.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Debes unirte a un evento para continuar", Toast.LENGTH_SHORT).show()
+            }
             UnirseEvento(navController)
+        }
+        composable(AppScreens.CheckInQR.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
+            }
+            CheckInQR(navController)
+        }
+        composable(AppScreens.Ponencias.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
+            }
+            MisPonencias(navController)
+        }
+        composable(AppScreens.Valoracion.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
+            }
+            Valoracion(navController)
+        }
+        composable(AppScreens.Ajustes.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
+            }
+            Ajustes(navController)
+        }
+        composable(AppScreens.MisEventos.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
+            }
+            MisEventos(navController)
+        }
+        composable(AppScreens.ChatbotAsistente.route) {
+            ChatbotAsistente(navController)
         }
         composable(
             route = AppScreens.DetalleEvento.route,
@@ -68,14 +95,18 @@ fun AppNavigation(destinoNotificacion: String? = null) {
             DetalleEvento(navController, idEvento)
         }
         composable(
-            route = AppScreens.DetallePonencia.route,
+            route = AppScreens.DetallePonenciaParticipante.route,
             arguments = listOf(navArgument("idPonencia") { type = NavType.StringType })
         ) { backStackEntry ->
             val idPonencia = backStackEntry.arguments?.getString("idPonencia") ?: ""
-            DetallePonencia(navController, idPonencia)
+            DetallePonenciaParticipante(navController, idPonencia)
         }
-        composable(AppScreens.ChatbotAsistente.route) {
-            ChatbotAsistente(navController)
+        composable(
+            route = AppScreens.DetallePonenciaOrganizador.route,
+            arguments = listOf(navArgument("idPonencia") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val idPonencia = backStackEntry.arguments?.getString("idPonencia") ?: ""
+            DetallePonenciaOrganizador(navController, idPonencia)
         }
     }
 }

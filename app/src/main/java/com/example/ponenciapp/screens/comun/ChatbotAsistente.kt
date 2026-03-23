@@ -133,9 +133,7 @@ fun ChatbotAsistente(navController: NavController) {
 
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
 
-    var checkInRealizado by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
-    var escaneando by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -148,14 +146,6 @@ fun ChatbotAsistente(navController: NavController) {
         isLoading = false
     }
 
-    // Si está cargando los datos muestra un iconito de carga
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
     Scaffold(snackbarHost = {
         SnackbarHost(hostState = snackbarHostState)
     }, topBar = {
@@ -163,16 +153,8 @@ fun ChatbotAsistente(navController: NavController) {
             title = {
                 Column {
                     Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    // Nombre del participante debajo del título
-//                    participante?.let {
-//                        Text(
-//                            "${it.nombre} ${it.apellidos}",
-//                            fontSize = 12.sp,
-//                            color = Color.White.copy(alpha = 0.8f)
-//                        )
-//                    }
                     Text(
-                        "Asistente de usuario",
+                        "Asistente virtual",
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -203,97 +185,18 @@ fun ChatbotAsistente(navController: NavController) {
                 }
                 // Icono circular con la inicial del usuario
                 // Al pulsar muestra un dialog con los datos del participante
-                participante?.let { usuario ->
-                    var showCardDialog by remember { mutableStateOf(false) }
-                    val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.tertiary, CircleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                            .clickable { showCardDialog = true }) {
-                        Text(
-                            modifier = Modifier.align(Alignment.Center),
-                            text = inicial,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
-                        )
-                    }
-
-                    // Dialog con los datos del participante
-                    if (showCardDialog) {
-                        Dialog(onDismissRequest = { showCardDialog = false }) {
-                            Card(
-                                shape = MaterialTheme.shapes.large,
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.cardElevation(8.dp),
-                                modifier = Modifier.padding(10.dp)
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .padding(16.dp)
-                                            .widthIn(min = 200.dp, max = 300.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(60.dp)
-                                                .background(
-                                                    MaterialTheme.colorScheme.tertiary, CircleShape
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    MaterialTheme.colorScheme.secondary,
-                                                    CircleShape
-                                                )
-                                        ) {
-                                            Text(
-                                                modifier = Modifier.align(Alignment.Center),
-                                                text = inicial,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = Color.White
-                                            )
-                                        }
-                                        Column(modifier = Modifier.padding(16.dp)) {
-                                            Text(
-                                                "${usuario.nombre} ${usuario.apellidos}",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Text(
-                                                "Email: ${usuario.emailEduca}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                "Centro: ${usuario.centro} - ${usuario.codigoCentro}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                "Rol: ${usuario.rol}",
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                        }
-                                    }
-                                    Button(
-                                        modifier = Modifier.padding(bottom = 16.dp),
-                                        onClick = { showCardDialog = false }) {
-                                        Text("Cerrar")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                participante?.let { IconoUsuario(participante = it) }
             }
         )
     }) { innerPadding ->
+
+        // Si está cargando los datos muestra un iconito de carga
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
 
         Column(
             modifier = Modifier

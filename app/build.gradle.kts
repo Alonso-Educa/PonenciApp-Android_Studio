@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ponenciapp"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -100,6 +100,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation(libs.androidx.compose.animation)
+    implementation(libs.androidx.material3)
     ksp("androidx.room:room-compiler:2.6.1")
 
     // ---------------- FIREBASE  ----------------

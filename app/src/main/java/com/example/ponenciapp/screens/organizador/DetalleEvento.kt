@@ -229,6 +229,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                         )
                     }
 
+                    // Dialog con los datos del participante
                     if (showCardDialog) {
                         Dialog(onDismissRequest = { showCardDialog = false }) {
                             Card(
@@ -252,7 +253,8 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                             modifier = Modifier
                                                 .size(60.dp)
                                                 .background(
-                                                    MaterialTheme.colorScheme.tertiary, CircleShape
+                                                    MaterialTheme.colorScheme.tertiary,
+                                                    CircleShape
                                                 )
                                                 .border(
                                                     1.dp,
@@ -431,45 +433,6 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Ver QR de Check-in")
                         }
-
-//                        HorizontalDivider()
-//                        Spacer(modifier = Modifier.height(8.dp))
-//                        Row(
-//                            horizontalArrangement = Arrangement.SpaceBetween
-//                        ) {
-//                            // Botón para generar el documento excel de asistencia
-//                            Button(
-//                                onClick = {
-//                                    scope.launch {
-//                                        exportarAsistenciasExcel(
-//                                            context, evento?.idEvento ?: ""
-//                                        )
-//                                    }
-//                                }, modifier = Modifier
-//                                    .weight(1f)
-//                                    .fillMaxWidth()
-//                            ) {
-//                                Icon(Lucide.FileSpreadsheet, contentDescription = null)
-//                                Spacer(modifier = Modifier.width(8.dp))
-//                                Text("Exportar Excel de Asistencias")
-//                            }
-//                            // Botón para generar el documento pdf de asistencia
-//                            Button(
-//                                onClick = {
-//                                    scope.launch {
-//                                        exportarAsistenciasPdf(
-//                                            context, evento?.idEvento ?: ""
-//                                        )
-//                                    }
-//                                }, modifier = Modifier
-//                                    .weight(1f)
-//                                    .fillMaxWidth()
-//                            ) {
-//                                Icon(Lucide.File, contentDescription = null)
-//                                Spacer(modifier = Modifier.width(8.dp))
-//                                Text("Exportar Excel de Asistencias")
-//                            }
-//                        }
                     }
                 }
             }
@@ -517,7 +480,14 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clickable {
+                                    navController.navigate(
+                                        AppScreens.DetallePonenciaOrganizador.createRoute(
+                                            ponencia.idPonencia
+                                        )
+                                    )
+                                },
                             elevation = CardDefaults.cardElevation(2.dp)
                         ) {
                             Row(

@@ -16,10 +16,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.room.Room
-import com.example.ponenciapp.data.Estructura
-import com.example.ponenciapp.data.bbdd.AppDB
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.IndexedColors
@@ -32,6 +31,65 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Modelo interno para las filas de exportación
+data class AsistenciaRow(
+    val fechaHora: String,
+    val nombreEvento: String,
+    val nombrePonencia: String,
+    val nombreParticipante: String,
+    val tipo: String
+)
+
+// Función auxiliar para cargar datos desde Firestore
+suspend fun cargarDatosAsistencias(idEvento: String): List<AsistenciaRow> {
+    val firestore = FirebaseFirestore.getInstance()
+
+    val asistenciasSnapshot = firestore.collection("asistencias")
+        .whereEqualTo("idEvento", idEvento)
+        .get().await()
+
+    val participantesSnapshot = firestore.collection("participantes").get().await()
+
+    val ponenciasSnapshot = firestore.collection("ponencias")
+        .whereEqualTo("idEvento", idEvento)
+        .get().await()
+
+    val eventoSnapshot = firestore.collection("eventos")
+        .document(idEvento)
+        .get().await()
+
+    val nombreEvento = eventoSnapshot.getString("nombre") ?: ""
+
+    // Mapas para acceso rápido por id
+    val participantesMap = participantesSnapshot.documents.associate { doc ->
+        doc.id to "${doc.getString("nombre") ?: ""} ${doc.getString("apellidos") ?: ""}"
+    }
+    val ponenciasMap = ponenciasSnapshot.documents.associate { doc ->
+        doc.id to (doc.getString("titulo") ?: "")
+    }
+
+    return asistenciasSnapshot.documents.map { doc ->
+        val idParticipante = doc.getString("idParticipante") ?: ""
+        val idPonencia = doc.getString("idPonencia") ?: ""
+        val fechaHora = doc.getString("fechaHora") ?: ""
+
+        // Formatear fecha desde milisegundos
+        val fechaFormateada = try {
+            val millis = fechaHora.toLong()
+            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(millis))
+        } catch (e: Exception) {
+            fechaHora
+        }
+
+        AsistenciaRow(
+            fechaHora = fechaFormateada,
+            nombreEvento = nombreEvento,
+            nombrePonencia = if (idPonencia.isNotEmpty()) ponenciasMap[idPonencia] ?: "" else "",
+            nombreParticipante = participantesMap[idParticipante] ?: "",
+            tipo = doc.getString("tipo") ?: ""
+        )
+    }.sortedWith(compareBy({ it.tipo }, { it.fechaHora }))
+}
 
 // ─── EXCEL ───────────────────────────────────────────────────────────────────
 
@@ -45,21 +103,17 @@ fun exportarAsistenciasExcelUI(context: Context, idEvento: String) {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.Q)
 suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
     val workbook = XSSFWorkbook()
     val sheet = workbook.createSheet("Asistencias")
 
-    val db = Room.databaseBuilder(
-        context.applicationContext, AppDB::class.java, Estructura.DB.NAME
-    ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
-
-    val participanteDao = db.participanteDao()
-    val eventoDao = db.eventoDao()
-    val ponenciaDao = db.ponenciaDao()
-    val asistenciaDao = db.asistenciaDao()
-
-    val listaAsistencias = asistenciaDao.getAsistenciasDeEvento(idEvento)
+    // ✅ Cargar datos desde Firestore
+    val filas = try {
+        cargarDatosAsistencias(idEvento)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error cargando datos: ${e.message}", Toast.LENGTH_SHORT).show()
+        return
+    }
 
     // Estilos
     val styleTitulo: XSSFCellStyle = workbook.createCellStyle() as XSSFCellStyle
@@ -83,6 +137,14 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
         fillPattern = FillPatternType.SOLID_FOREGROUND
     }
 
+    // Estilo para celdas normales
+    val styleData: XSSFCellStyle = workbook.createCellStyle() as XSSFCellStyle
+    styleData.apply {
+        alignment = HorizontalAlignment.CENTER
+        verticalAlignment = VerticalAlignment.CENTER
+        wrapText = true
+    }
+
     // Fila 0: Título
     val rowTitulo = sheet.createRow(0)
     val cellTitulo = rowTitulo.createCell(0)
@@ -99,50 +161,33 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
         cell.cellStyle = styleHeader
     }
 
-    // Estilo para celdas normales
-    val styleData: XSSFCellStyle = workbook.createCellStyle() as XSSFCellStyle
-    styleData.apply {
-        alignment = HorizontalAlignment.CENTER
-        verticalAlignment = VerticalAlignment.CENTER
-        wrapText = true  // para que respeten los saltos de línea
-    }
-
     // Filas de datos
-    listaAsistencias.forEachIndexed { index, asistencia ->
-        // Obtener los nombres de participante y evento
-        val participante = participanteDao.getParticipantePorId(asistencia.idParticipante)
-        val evento = eventoDao.getEventoPorId(asistencia.idEvento)
-        val ponencia = ponenciaDao.getPonenciaPorId(asistencia.idPonencia)
-
+    filas.forEachIndexed { index, fila ->
         val row = sheet.createRow(index + 2)
-        val nombreEvento = evento?.nombre
-        val nombreParticipante = "${participante?.nombre} ${participante?.apellidos}"
-        val nombrePonencia = ponencia?.titulo
 
-        val cell0 = row.createCell(1)
-        cell0.setCellValue(asistencia.fechaHora)
+        val cell0 = row.createCell(0)
+        cell0.setCellValue(fila.fechaHora)
         cell0.cellStyle = styleData
 
         val cell1 = row.createCell(1)
-        cell1.setCellValue(nombreEvento)
+        cell1.setCellValue(fila.nombreEvento)
         cell1.cellStyle = styleData
 
         val cell2 = row.createCell(2)
-        cell2.setCellValue(if (asistencia.idPonencia != "") nombrePonencia else "")
+        cell2.setCellValue(fila.nombrePonencia)
         cell2.cellStyle = styleData
 
-        val cell3 = row.createCell(2)
-        cell3.setCellValue(nombreParticipante)
+        val cell3 = row.createCell(3)
+        cell3.setCellValue(fila.nombreParticipante)
         cell3.cellStyle = styleData
 
-        val cell4 = row.createCell(3)
-        cell4.setCellValue(asistencia.tipo)
+        val cell4 = row.createCell(4)
+        cell4.setCellValue(fila.tipo)
         cell4.cellStyle = styleData
-
     }
 
-    // Anchos de columna fijos (en lugar de autoSizeColumn)
-    val columnWidths = listOf(6000, 8000, 5000, 7000, 10000)
+    // Anchos de columna fijos
+    val columnWidths = listOf(6000, 8000, 5000, 7000, 4000)
     for (i in columnWidths.indices) {
         sheet.setColumnWidth(i, columnWidths[i])
     }
@@ -150,7 +195,7 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
     // Guardar en Descargas
     val resolver = context.contentResolver
     val values = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, "asistencias.xlsx")
+        put(MediaStore.MediaColumns.DISPLAY_NAME, "asistencias_${System.currentTimeMillis()}.xlsx")
         put(
             MediaStore.MediaColumns.MIME_TYPE,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -164,7 +209,9 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
             workbook.write(stream)
         }
         workbook.close()
-        Toast.makeText(context, "Excel guardado en Descargas", Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            context, "Informe de asistencias guardado en Descargas", Toast.LENGTH_LONG
+        ).show()
     }
 }
 
@@ -184,19 +231,16 @@ fun exportarAsistenciasPdfUI(context: Context, idEvento: String) {
 suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     val pdf = PdfDocument()
 
-    val db = Room.databaseBuilder(
-        context.applicationContext, AppDB::class.java, Estructura.DB.NAME
-    ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
-
-    val participanteDao = db.participanteDao()
-    val eventoDao = db.eventoDao()
-    val ponenciaDao = db.ponenciaDao()
-    val asistenciaDao = db.asistenciaDao()
-
-    val listaAsistencias = asistenciaDao.getAsistenciasDeEvento(idEvento)
+    // Cargar datos desde Firestore
+    val filas = try {
+        cargarDatosAsistencias(idEvento)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error cargando datos: ${e.message}", Toast.LENGTH_SHORT).show()
+        return
+    }
 
     // ── Configuración de página ──────────────────────────────────────
-    val pageWidth = 595f   // A4 portrait en puntos
+    val pageWidth = 595f
     val pageHeight = 842f
     val margin = 32f
 
@@ -224,7 +268,7 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     val subtitlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 10f
         color = Color.GRAY
-        textAlign = Paint.Align.CENTER  // ← CENTER
+        textAlign = Paint.Align.CENTER
     }
     val headerTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 11f
@@ -235,10 +279,9 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     val cellTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 10f
         color = colorBodyTxt
-        // ← Sin textAlign, LEFT por defecto
     }
 
-    // ── Columnas (nombre, ancho relativo 0..1) ───────────────────────
+    // ── Columnas ─────────────────────────────────────────────────────
     data class ColDef(val label: String, val weight: Float)
 
     val columns = listOf(
@@ -268,14 +311,14 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     // ── Helpers ──────────────────────────────────────────────────────
     fun buildLayout(text: String, width: Float, paint: TextPaint): StaticLayout =
         StaticLayout.Builder.obtain(text, 0, text.length, paint, width.toInt())
-            .setAlignment(Layout.Alignment.ALIGN_CENTER)  // ← StaticLayout centra dentro del width
-            .setLineSpacing(2f, 1f).setIncludePad(false).build()
+            .setAlignment(Layout.Alignment.ALIGN_CENTER)
+            .setLineSpacing(2f, 1f)
+            .setIncludePad(false)
+            .build()
 
     fun drawHeader(startY: Float): Float {
-        // Fondo de cabecera
         fillPaint.color = colorHeader
         canvas.drawRect(margin, startY, margin + tableWidth, startY + headerH, fillPaint)
-        // Texto centrado verticalmente
         columns.forEachIndexed { i, col ->
             val cx = colX[i] + colWidths[i] / 2f
             val fm = headerTextPaint.fontMetrics
@@ -283,7 +326,6 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
             val ty = startY + (headerH - textH) / 2f - fm.ascent
             canvas.drawText(col.label, cx, ty, headerTextPaint)
         }
-        // Borde inferior cabecera
         canvas.drawLine(
             margin, startY + headerH, margin + tableWidth, startY + headerH, borderPaint
         )
@@ -301,7 +343,6 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
             canvas.drawText(
                 "Asistencias al evento (continuación)", pageWidth / 2f, y + 18f, titlePaint
             )
-            //                                                ↑ aquí es donde falla si tienes margin
             y += 28f
         }
         y = drawHeader(y) + 1f
@@ -321,58 +362,37 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
     // ── Dibujar encabezado primera página ────────────────────────────
     drawPageHeader(true)
 
-    // ── Filas ────────────────────────────────────────────────────────
-    listaAsistencias.forEachIndexed { rowIndex, asistencia ->
-        // Obtener los nombres de participante y evento
-        val participante = participanteDao.getParticipantePorId(asistencia.idParticipante)
-        val evento = eventoDao.getEventoPorId(asistencia.idEvento)
-        val ponencia = ponenciaDao.getPonenciaPorId(asistencia.idPonencia)
-
-        val nombreEvento = evento?.nombre
-        val nombreParticipante = "${participante?.nombre} ${participante?.apellidos}"
-        val nombrePonencia = ponencia?.titulo
-
-        val partes = asistencia.fechaHora.split(" ")
-        val fecha = partes[0]  // "18/03/2026"
-        val hora = partes[1]  // "14:35:22"
-
+    // ── Filas — usando datos de Firestore ────────────────────────────
+    filas.forEachIndexed { rowIndex, fila ->
         val texts = listOf(
-            "${fecha}\n${hora}",
-            nombreEvento,
-            if (asistencia.idPonencia != "") nombrePonencia else "",
-            nombreParticipante,
-            asistencia.tipo
+            fila.fechaHora,
+            fila.nombreEvento,
+            fila.nombrePonencia,
+            fila.nombreParticipante,
+            fila.tipo
         )
 
-        // Calcular layouts y altura de fila
         val layouts = texts.mapIndexed { i, t ->
-            buildLayout(t!!, colWidths[i] - cellPadH * 2, cellTextPaint)
+            buildLayout(t, colWidths[i] - cellPadH * 2, cellTextPaint)
         }
         val rowH = maxOf(minRowH, layouts.maxOf { it.height.toFloat() } + cellPadV * 2)
 
-        // Nueva página si no cabe
         if (y + rowH > pageHeight - margin) newPage()
 
-        // Fondo alternado
         fillPaint.color = if (rowIndex % 2 == 0) colorRowEven else colorRowOdd
         canvas.drawRect(margin, y, margin + tableWidth, y + rowH, fillPaint)
 
-        // Contenido de cada celda
         layouts.forEachIndexed { i, layout ->
             val textH = layout.height.toFloat()
             val textTop = y + (rowH - textH) / 2f
-
             canvas.save()
             canvas.clipRect(colX[i], y, colX[i] + colWidths[i], y + rowH)
-            canvas.translate(colX[i] + cellPadH, textTop)  // ← traducir al inicio del padding
+            canvas.translate(colX[i] + cellPadH, textTop)
             layout.draw(canvas)
             canvas.restore()
         }
 
-        // Bordes: línea inferior de fila
         canvas.drawLine(margin, y + rowH, margin + tableWidth, y + rowH, borderPaint)
-
-        // Líneas verticales
         colX.forEach { cx ->
             canvas.drawLine(cx, y, cx, y + rowH, borderPaint)
         }
@@ -381,23 +401,28 @@ suspend fun exportarAsistenciasPdf(context: Context, idEvento: String) {
         y += rowH
     }
 
-    // Borde superior de toda la tabla (se dibuja al final para no tapar filas)
-    // Borde exterior izquierdo y derecho ya cubiertos por líneas verticales
-
     pdf.finishPage(page)
 
     // ── Guardar en Descargas ─────────────────────────────────────────
     val values = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, "asistencias_${System.currentTimeMillis()}.pdf")
+        put(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            "asistencias_${System.currentTimeMillis()}.pdf"
+        )
         put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
         put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
     }
     try {
-        val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        val uri =
+            context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
         uri?.let {
             context.contentResolver.openOutputStream(it)?.use { stream ->
                 pdf.writeTo(stream)
-                Toast.makeText(context, "PDF guardado en Descargas ✓", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    "Informe de asistencias guardado en Descargas",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     } catch (e: Exception) {

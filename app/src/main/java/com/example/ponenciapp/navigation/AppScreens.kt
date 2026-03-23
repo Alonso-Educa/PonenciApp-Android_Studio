@@ -9,13 +9,16 @@ sealed class AppScreens(val route: String) {
     object Valoracion : AppScreens("Valoracion")
     object Ajustes : AppScreens("Ajustes")
     object MisEventos : AppScreens("MisEventos")
-    object ChatbotAsistente : AppScreens("ChatbotAsistente")
     object DetalleEvento : AppScreens("DetalleEvento/{idEvento}") {
         fun createRoute(idEvento: String) = "DetalleEvento/$idEvento"
     }
-    object DetallePonencia : AppScreens("DetallePonencia/{idPonencia}") {
-        fun createRoute(idPonencia: String) = "DetallePonencia/$idPonencia"
+    object DetallePonenciaParticipante : AppScreens("DetallePonenciaParticipante/{idPonencia}") {
+        fun createRoute(idPonencia: String) = "DetallePonenciaParticipante/$idPonencia"
     }
+    object DetallePonenciaOrganizador : AppScreens("DetallePonenciaOrganizador/{idPonencia}") {
+        fun createRoute(idPonencia: String) = "DetallePonenciaOrganizador/$idPonencia"
+    }
+    object ChatbotAsistente : AppScreens("ChatbotAsistente")
 
     companion object {
         fun fromRoute(route: String): AppScreens? {
@@ -29,7 +32,8 @@ sealed class AppScreens(val route: String) {
                 "Ajustes" -> Ajustes
                 "MisEventos" -> MisEventos
                 "DetalleEvento" -> DetalleEvento
-                "DetallePonencia" -> DetallePonencia
+                "DetallePonenciaParticipante" -> DetallePonenciaParticipante
+                "DetallePonenciaOrganizador" -> DetallePonenciaOrganizador
                 "ChatbotAsistente" -> ChatbotAsistente
                 else -> null
             }
