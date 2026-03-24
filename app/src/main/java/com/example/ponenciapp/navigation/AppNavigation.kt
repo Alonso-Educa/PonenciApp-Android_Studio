@@ -85,6 +85,9 @@ fun AppNavigation(destinoNotificacion: String? = null) {
             MisEventos(navController)
         }
         composable(AppScreens.ChatbotAsistente.route) {
+            BackHandler(true) {
+                Toast.makeText(context, "Usa la flecha de volver atrás para salir", Toast.LENGTH_SHORT).show()
+            }
             ChatbotAsistente(navController)
         }
         composable(

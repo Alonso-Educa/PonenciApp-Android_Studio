@@ -54,6 +54,7 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.data.bbdd.entities.ValoracionData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
 import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
 import com.example.ponenciapp.screens.comun.IconoUsuario
@@ -67,35 +68,43 @@ import com.google.firebase.auth.auth
 @Composable
 fun Valoracion(navController: NavController) {
 
+    // Variables de estado
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val firestore = FirebaseFirestore.getInstance()
     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    // Para las notificaciones
+    val notificationHandler = NotificationHandler(context)
+
+    // Base de datos de room
     val db = remember {
         Room.databaseBuilder(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
 
+    // Daos de Room
     val valoracionDao = db.valoracionDao()
     val ponenciaDao = db.ponenciaDao()
     val eventoDao = db.eventoDao()
     val participanteDao = db.participanteDao()
 
+    // Variables básicas
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
     var idEvento by remember { mutableStateOf("") }
     var idParticipante by remember { mutableStateOf("") }
 
+    // Variables de control
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
 
-    // Valoración general del evento
+    // Para la valoración del evento
     var evento by remember { mutableStateOf<EventoData?>(null) }
     var puntuacionEvento by remember { mutableIntStateOf(0) }
     var comentarioEvento by remember { mutableStateOf("") }
 
-    // Valoraciones de las ponencias
+    // Para las valoraciones de las ponencias
     var listaPonencias by remember { mutableStateOf<List<PonenciaData>>(emptyList()) }
     var puntuacionesPonencias by remember { mutableStateOf(mapOf<String, Int>()) }
 
@@ -351,8 +360,12 @@ fun Valoracion(navController: NavController) {
                                 )
                                 isSaving = false
                                 Toast.makeText(
-                                    context, "Valoración guardada correctamente", Toast.LENGTH_SHORT
+                                    context, "Valoración enviada correctamente", Toast.LENGTH_SHORT
                                 ).show()
+                                notificationHandler.enviarNotificacionSimple(
+                                    "Valoración enviada correctamente",
+                                    "Acabas de enviar una valoración, nuestros organizadores lo agradecerán"
+                                )
                             }
                         }.addOnFailureListener { e ->
                             isSaving = false
@@ -428,7 +441,7 @@ fun Valoracion(navController: NavController) {
     }
 }
 
-// Selector de estrellas
+// Selector de estrellas para las valoraciones
 @Composable
 fun SelectorEstrellas(
     puntuacion: Int, onPuntuacionChange: (Int) -> Unit
@@ -436,6 +449,7 @@ fun SelectorEstrellas(
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         (1..5).forEach { estrella ->
             IconButton(
+                // Actualiza el valor de estrella con la puntuación actual
                 onClick = { onPuntuacionChange(estrella) }, modifier = Modifier.size(36.dp)
             ) {
                 Icon(

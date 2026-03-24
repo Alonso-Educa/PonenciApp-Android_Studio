@@ -141,141 +141,147 @@ fun CheckInQR(navController: NavController) {
         }
     ) { padding ->
 
-    // Si está cargando muestra el iconito de carga
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+        // Si está cargando muestra el iconito de carga
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
         }
-        return@Scaffold
-    }
 
-    // Pantalla del escáner
-    if (escaneando) {
-        EscanerQR(
-            onQRLeido = { valor ->
-                // Si el qr devuelve el código correcto se pasa a firebase y se crea la asistencia
-                if (valor == "checkin:$idEvento") {
-                    val idAsistencia = "${idParticipante}_${idEvento}_checkin"
-                    firestore.collection("asistencias").document(idAsistencia)
-                        .set(mapOf(
-                            "idAsistencia" to idAsistencia,
-                            "idParticipante" to idParticipante,
-                            "idEvento" to idEvento,
-                            "idPonencia" to "",
-                            "tipo" to "checkin",
-                            "fechaHora" to formatearFechaHora()
-                        ))
-                        .addOnSuccessListener {
-                            scope.launch {
-                                asistenciaDao.insertar(
-                                    AsistenciaData(
-                                        idAsistencia = idAsistencia,
-                                        idParticipante = idParticipante,
-                                        idEvento = idEvento,
-                                        idPonencia = "",
-                                        tipo = "checkin",
-                                        fechaHora = formatearFechaHora()
-                                    )
+        // Pantalla del escáner
+        if (escaneando) {
+            EscanerQR(
+                onQRLeido = { valor ->
+                    // Si el qr devuelve el código correcto se pasa a firebase y se crea la asistencia
+                    if (valor == "checkin:$idEvento") {
+                        val idAsistencia = "${idParticipante}_${idEvento}_checkin"
+                        firestore.collection("asistencias").document(idAsistencia)
+                            .set(
+                                mapOf(
+                                    "idAsistencia" to idAsistencia,
+                                    "idParticipante" to idParticipante,
+                                    "idEvento" to idEvento,
+                                    "idPonencia" to "",
+                                    "tipo" to "checkin",
+                                    "fechaHora" to formatearFechaHora()
                                 )
-                                checkInRealizado = true
+                            )
+                            .addOnSuccessListener {
+                                scope.launch {
+                                    asistenciaDao.insertar(
+                                        AsistenciaData(
+                                            idAsistencia = idAsistencia,
+                                            idParticipante = idParticipante,
+                                            idEvento = idEvento,
+                                            idPonencia = "",
+                                            tipo = "checkin",
+                                            fechaHora = formatearFechaHora()
+                                        )
+                                    )
+                                    checkInRealizado = true
+                                    escaneando = false
+                                    Toast.makeText(
+                                        context,
+                                        "¡Check-in realizado correctamente!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    notificationHandler.enviarNotificacionSimple(
+                                        "Check-in realizado",
+                                        "Acabas de realizar el check-in al evento. Esperamos que tu asistencia sea satifactoria"
+                                    )
+                                }
+                            }
+                            .addOnFailureListener { e ->
                                 escaneando = false
                                 Toast.makeText(
                                     context,
-                                    "¡Check-in realizado correctamente!",
+                                    "Error al registrar: ${e.message}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
-                        }
-                        .addOnFailureListener { e ->
-                            escaneando = false
-                            Toast.makeText(
-                                context,
-                                "Error al registrar: ${e.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                } else {
-                    escaneando = false
-                    Toast.makeText(
-                        context,
-                        "QR no válido para este evento",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            },
-            onCancelar = { escaneando = false }
-        )
-        return@Scaffold
-    }
+                    } else {
+                        escaneando = false
+                        Toast.makeText(
+                            context,
+                            "QR no válido para este evento",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                onCancelar = { escaneando = false }
+            )
+            return@Scaffold
+        }
 
-    // Pantalla principal
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Si se ha realizado el checkin muestra el mensaje
-        if (checkInRealizado) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = Color(0xFF4CAF50)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "¡Check-in realizado!",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4CAF50)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Tu asistencia al evento ha sido registrada correctamente.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-            // Si no se ha realizado el checkin le pide al usuario que escanee el qr
-        } else {
-            Icon(
-                Icons.Default.QrCodeScanner,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "Check-in al evento",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Escanea el código QR del evento para registrar tu asistencia.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            // Botón para escanear el qr
-            Button(
-                onClick = { escaneando = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(padding)
-                    .height(50.dp)
-            ) {
-                Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Escanear QR")
+        // Pantalla principal
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Si se ha realizado el checkin muestra el mensaje
+            if (checkInRealizado) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = Color(0xFF4CAF50)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "¡Check-in realizado!",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Tu asistencia al evento ha sido registrada correctamente.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
+                )
+                // Si no se ha realizado el checkin le pide al usuario que escanee el qr
+            } else {
+                Icon(
+                    Icons.Default.QrCodeScanner,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Check-in al evento",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Escanea el código QR del evento para registrar tu asistencia.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                // Botón para escanear el qr
+                Button(
+                    onClick = { escaneando = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Escanear QR")
+                }
             }
         }
     }
-}}
+}
 
 fun formatearFechaHora(): String {
     val sdfCompleto = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())

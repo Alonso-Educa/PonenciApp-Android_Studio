@@ -542,7 +542,7 @@ fun DialogRegistro(
                                                         // Cerrar sesión tras registrar para que el usuario haga login manualmente
                                                         auth.signOut()
                                                         notificationHandler.enviarNotificacionSimple(
-                                                            "Registro exitoso", "Bienvenido $nombre"
+                                                            "Registro exitoso", "¡Bienvenido a PonenciApp, $nombre!"
                                                         )
                                                     }
                                                 }.addOnFailureListener { e ->

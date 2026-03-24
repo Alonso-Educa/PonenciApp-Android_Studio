@@ -70,6 +70,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -128,22 +129,37 @@ fun ChatbotAsistente(navController: NavController) {
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
 
+    // Daos de room
     val mensajeDao = db.mensajeDao()
     val participanteDao = db.participanteDao()
 
+    // Datos del participante
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
 
+    // Variables de control
     var isLoading by remember { mutableStateOf(true) }
-
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    val viewModel: ChatViewModel = viewModel()
     var showDialog by remember { mutableStateOf(false) }
+    val viewModel: ChatViewModel = viewModel(
+        LocalContext.current as androidx.activity.ComponentActivity
+    )
+
 
     LaunchedEffect(Unit) {
         // Carga el participante desde Room
         participante = participanteDao.getParticipantePorId(uid)
         isLoading = false
+        // Se sabe que el usuario está en la ventana
+        viewModel.usuarioEnChat = true
+    }
+
+    // Al salir de la pantalla
+    DisposableEffect(Unit) {
+        onDispose {
+            // El usuario ya no esta en la ventana
+            viewModel.usuarioEnChat = false
+        }
     }
 
     Scaffold(snackbarHost = {
@@ -163,7 +179,13 @@ fun ChatbotAsistente(navController: NavController) {
                 containerColor = MaterialTheme.colorScheme.primary, titleContentColor = Color.White
             ), navigationIcon = {
                 // Botón para volver atrás
-                IconButton(onClick = { navController.popBackStack() }) {
+                IconButton(
+                    onClick = {
+                        navController.navigate("Ajustes") {
+                            popUpTo("ChatbotAsistente") { inclusive = true }
+                        }
+                    }
+                ) {
                     Icon(
                         Icons.Default.ArrowBack,
                         contentDescription = "Atrás",

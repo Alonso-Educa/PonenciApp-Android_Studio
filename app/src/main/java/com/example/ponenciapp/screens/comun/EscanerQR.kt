@@ -11,10 +11,15 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -161,8 +166,13 @@ fun EscanerQR(
         TextButton(
             onClick = onCancelar,
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(32.dp),
+                .align(Alignment.Center)
+                .navigationBarsPadding()
+                .background(
+                    Color.Black.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.medium
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
         ) {
             Text("Cancelar", style = MaterialTheme.typography.titleMedium)

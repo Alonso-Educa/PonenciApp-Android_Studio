@@ -400,6 +400,7 @@ fun Ajustes(navController: NavController) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Botón de exportar a excel
                         TextButton(
                             modifier = Modifier.weight(1f),
                             onClick = {
@@ -418,8 +419,7 @@ fun Ajustes(navController: NavController) {
                             Text("Exportar a Excel")
                         }
 
-//                        Spacer(modifier = Modifier.weight(1f))
-
+                        // Botón de exportar a pdf
                         TextButton(
                             modifier = Modifier.weight(1f),
                             onClick = {

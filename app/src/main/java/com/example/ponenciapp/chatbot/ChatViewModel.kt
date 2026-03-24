@@ -14,6 +14,7 @@ import com.example.ponenciapp.BuildConfig
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.MensajeData
+import com.example.ponenciapp.notification.NotificationHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,6 +25,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
+
+    // Para las notificaciones
+    private val notificationHandler = NotificationHandler(application.applicationContext)
+
+    // Variable para saber si el usuario está en la pantalla del chat
+    var usuarioEnChat by mutableStateOf(false)
 
     private val db = databaseBuilder(
         application, AppDB::class.java, Estructura.DB.NAME
@@ -156,6 +163,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } finally {
+                // Guarda el mensaje aunque se cancele
+                if (botMensajeIndex != -1 && botMensajeIndex < mensajes.size) {
+                    val contenidoParcial = mensajes[botMensajeIndex].contenido
+
+                    if (contenidoParcial.isNotBlank()) {
+                        withContext(Dispatchers.IO) {
+                            mensajeDao.insertarMensaje(
+                                MensajeData(
+                                    rol = "assistant",
+                                    contenido = contenidoParcial,
+                                    fecha = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                    }
+                }
+
+                if (!usuarioEnChat) {
+                    notificationHandler.enviarNotificacionConDestino(
+                        titulo = "Tu consulta ha sido respondida",
+                        cuerpo = "El asistente ha terminado de responder",
+                        destino = "ChatbotAsistente"
+                    )
+                }
+
                 // resetear ambos estados siempre
                 escribiendo = false
                 pensando = false
@@ -181,9 +213,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         pensando = false
 
         // eliminar el mensaje en curso del bot si quedó en la lista
-        if (botMensajeIndex != -1 && botMensajeIndex < mensajes.size) {
-            mensajes.removeAt(botMensajeIndex)
-        }
+//        if (botMensajeIndex != -1 && botMensajeIndex < mensajes.size) {
+//            mensajes.removeAt(botMensajeIndex)
+//        }
         botMensajeIndex = -1
     }
 

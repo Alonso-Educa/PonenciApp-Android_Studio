@@ -65,6 +65,7 @@ import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
 import com.example.ponenciapp.data.bbdd.entities.EventoData
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.EscanerQR
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -80,7 +81,9 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
     val scope = rememberCoroutineScope()
     val firestore = FirebaseFirestore.getInstance()
     val uid = Firebase.auth.currentUser?.uid ?: ""
-    val auth = Firebase.auth
+
+    // Para las notificaciones
+    val notificationHandler = NotificationHandler(context)
 
     // base de datos de room
     val db = remember {
@@ -94,11 +97,13 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
     val participanteDao = db.participanteDao()
     val asistenciaDao = db.asistenciaDao()
 
+    // variables de room
     var ponencia by remember { mutableStateOf<PonenciaData?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
     var evento by remember { mutableStateOf<EventoData?>(null) }
 
+    // variables de control
+    var isLoading by remember { mutableStateOf(true) }
     var escaneando by remember { mutableStateOf(false) }
     var checkInRealizado by remember { mutableStateOf(false) }
 
@@ -481,9 +486,13 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                         escaneando = false
                         Toast.makeText(
                             context,
-                            "¡Check-in realizado correctamente!",
+                            "¡Asistencia realizada correctamente!",
                             Toast.LENGTH_SHORT
                         ).show()
+                        notificationHandler.enviarNotificacionSimple(
+                            "Asistencia realizada",
+                            "Acabas de realizar la asistencia a la ponencia ${ponencia?.titulo}. Esperamos que tu asistencia sea satifactoria"
+                        )
                     }
                 }.addOnFailureListener { e ->
                     escaneando = false
