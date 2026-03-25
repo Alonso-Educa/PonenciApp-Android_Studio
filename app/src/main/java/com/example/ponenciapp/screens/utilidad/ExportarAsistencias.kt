@@ -1,18 +1,16 @@
-package com.example.ponenciapp.screens.comun
+package com.example.ponenciapp.screens.utilidad
 
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -107,7 +105,7 @@ suspend fun exportarAsistenciasExcel(context: Context, idEvento: String) {
     val workbook = XSSFWorkbook()
     val sheet = workbook.createSheet("Asistencias")
 
-    // ✅ Cargar datos desde Firestore
+    // Cargar datos desde Firestore
     val filas = try {
         cargarDatosAsistencias(idEvento)
     } catch (e: Exception) {

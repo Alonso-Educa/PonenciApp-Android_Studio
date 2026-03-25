@@ -57,7 +57,7 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
-import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -160,14 +160,16 @@ fun MisPonencias(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Column {
-                    Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Mis Ponencias",
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                } },
+                title = {
+                    Column {
+                        Text("PonenciApp", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Mis Ponencias",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
@@ -207,7 +209,7 @@ fun MisPonencias(navController: NavController) {
                     Text(
                         "No hay ponencias disponibles",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -215,13 +217,16 @@ fun MisPonencias(navController: NavController) {
         }
 
         // Sino, muestra la lista de ponencias
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             // Tarjeta con la información del evento
             evento?.let {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp), colors = CardDefaults.cardColors(
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
@@ -263,7 +268,7 @@ fun MisPonencias(navController: NavController) {
                             Text(
                                 it.descripcion,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -299,7 +304,10 @@ fun TarjetaPonencia(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -335,7 +343,7 @@ fun TarjetaPonencia(
                 Text(
                     ponencia.ponente,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

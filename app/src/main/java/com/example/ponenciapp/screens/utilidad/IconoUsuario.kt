@@ -1,4 +1,4 @@
-package com.example.ponenciapp.screens.comun
+package com.example.ponenciapp.screens.utilidad
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

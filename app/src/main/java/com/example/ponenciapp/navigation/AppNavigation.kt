@@ -15,11 +15,12 @@ import com.example.ponenciapp.screens.PantallaPrincipal
 import com.example.ponenciapp.screens.comun.*
 import com.example.ponenciapp.screens.organizador.*
 import com.example.ponenciapp.screens.participante.*
+import com.example.ponenciapp.screens.utilidad.ThemeViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
 @Composable
-fun AppNavigation(destinoNotificacion: String? = null) {
+fun AppNavigation(destinoNotificacion: String? = null, themeViewModel: ThemeViewModel) {
     val context = LocalContext.current
     val auth = Firebase.auth
 
@@ -41,7 +42,7 @@ fun AppNavigation(destinoNotificacion: String? = null) {
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(AppScreens.Login.route) {
-            Login(navController)
+            Login(navController, themeViewModel)
         }
         // Router — no tiene UI propia, solo redirige
         composable(AppScreens.PantallaPrincipal.route) {
@@ -76,7 +77,7 @@ fun AppNavigation(destinoNotificacion: String? = null) {
             BackHandler(true) {
                 Toast.makeText(context, "Usa el botón de cerrar sesión para salir", Toast.LENGTH_SHORT).show()
             }
-            Ajustes(navController)
+            Ajustes(navController, themeViewModel)
         }
         composable(AppScreens.MisEventos.route) {
             BackHandler(true) {
@@ -86,7 +87,11 @@ fun AppNavigation(destinoNotificacion: String? = null) {
         }
         composable(AppScreens.ChatbotAsistente.route) {
             BackHandler(true) {
-                Toast.makeText(context, "Usa la flecha de volver atrás para salir", Toast.LENGTH_SHORT).show()
+                navController.navigate("Ajustes") {
+                    popUpTo(AppScreens.ChatbotAsistente.route) {
+                        inclusive = true
+                    }
+                }
             }
             ChatbotAsistente(navController)
         }

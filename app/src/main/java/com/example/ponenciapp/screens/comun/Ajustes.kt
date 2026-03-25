@@ -43,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.room.Room
 import com.composables.icons.lucide.File
@@ -73,21 +75,21 @@ import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
-import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.navigation.AppScreens
-import com.example.ponenciapp.screens.organizador.DialogCrearPonencia
-import com.example.ponenciapp.screens.organizador.SelectorHora
 import com.example.ponenciapp.screens.participante.formatearFechaHora
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
+import com.example.ponenciapp.screens.utilidad.ThemeViewModel
+import com.example.ponenciapp.screens.utilidad.exportarAsistenciasExcel
+import com.example.ponenciapp.screens.utilidad.exportarAsistenciasPdf
 import com.google.firebase.Firebase
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Ajustes(navController: NavController) {
+fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     // Para ir a la web
     // Se vinculará la página de ayuda de la parte de flutter cuando se realice
     val context = LocalContext.current
@@ -147,6 +149,8 @@ fun Ajustes(navController: NavController) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
+//                    containerColor = MaterialTheme.colorScheme.primary,
+//                    titleContentColor = Color.White,
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
                 ),
@@ -210,7 +214,7 @@ fun Ajustes(navController: NavController) {
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
-                            elevation = CardDefaults.cardElevation(2.dp)
+                            elevation = CardDefaults.cardElevation(6.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
 
@@ -280,7 +284,7 @@ fun Ajustes(navController: NavController) {
                                     Text(
                                         it.emailEduca,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.Gray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
 
@@ -297,7 +301,7 @@ fun Ajustes(navController: NavController) {
                                     Text(
                                         "${it.centro} — ${it.codigoCentro}",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.Gray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
 
@@ -307,7 +311,7 @@ fun Ajustes(navController: NavController) {
                                 Text(
                                     "Restablecer mis datos privados",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(bottom = 4.dp)
                                 )
 
@@ -442,6 +446,37 @@ fun Ajustes(navController: NavController) {
                     HorizontalDivider()
 
                     Text(
+                        "Personalización",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Cambia el aspecto de la aplicación",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Modo oscuro",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+
+                        Switch(
+                            checked = themeViewModel.isDarkTheme,
+                            onCheckedChange = {
+                                themeViewModel.updateDarkTheme(it)
+                            }
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    Text(
                         "Otras opciones",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -544,7 +579,7 @@ fun Ajustes(navController: NavController) {
                             "Introduce tu nuevo email. Te enviaremos un enlace de confirmación.",
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         OutlinedTextField(
                             value = nuevoEmail,

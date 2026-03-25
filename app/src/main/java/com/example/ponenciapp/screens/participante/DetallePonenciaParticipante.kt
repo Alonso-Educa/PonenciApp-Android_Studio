@@ -376,7 +376,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                             Text(
                                 "Horario",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 "${p.horaInicio} - ${p.horaFin}",
@@ -419,7 +419,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                     Text(
                         p.descripcion,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 

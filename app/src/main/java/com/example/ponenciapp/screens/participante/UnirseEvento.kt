@@ -22,6 +22,7 @@ import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
@@ -116,7 +117,7 @@ fun UnirseEvento(navController: NavController) {
             Text(
                 "Introduce el código que te ha proporcionado el organizador del evento",
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
@@ -250,7 +251,7 @@ fun UnirseEvento(navController: NavController) {
                     popUpTo(0) { inclusive = true }
                 }
             }) {
-                Text("Cerrar sesión", color = Color.Gray)
+                Text("Cerrar sesión", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

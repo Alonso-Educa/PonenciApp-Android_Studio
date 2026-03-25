@@ -69,8 +69,7 @@ import com.example.ponenciapp.data.bbdd.entities.EventoData
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.comun.BottomBarOrganizador
-import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
-import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -209,13 +208,13 @@ fun MisEventos(navController: NavController) {
                     Text(
                         "No tienes eventos creados",
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "Pulsa el botón + para crear uno",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
@@ -234,7 +233,11 @@ fun MisEventos(navController: NavController) {
                                     navController.navigate(
                                         AppScreens.DetalleEvento.createRoute(evento.idEvento)
                                     )
-                                }, elevation = CardDefaults.cardElevation(4.dp)
+                                },
+                            elevation = CardDefaults.cardElevation(4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
@@ -260,7 +263,7 @@ fun MisEventos(navController: NavController) {
                                         Text(
                                             " ${evento.fecha}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -274,7 +277,7 @@ fun MisEventos(navController: NavController) {
                                         Text(
                                             " ${evento.lugar}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -410,6 +413,9 @@ fun DialogCrearEvento(
         Card(
             shape = MaterialTheme.shapes.large,
             elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
             modifier = Modifier.padding(16.dp)
         ) {
             Column(

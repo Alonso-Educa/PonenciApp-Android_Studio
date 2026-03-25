@@ -51,6 +51,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     var pensando by mutableStateOf(false)
         private set
 
+    var guardado by mutableStateOf(false)
+        private set
+
     private var enviarTarea: Job? = null
 
     // Índice del mensaje del bot que se está escribiendo actualmente (-1 = ninguno)
@@ -84,6 +87,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             try {
+                guardado = false
                 escribiendo = true
                 pensando = true
                 delay(500)
@@ -150,6 +154,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     )
                 }
+                guardado=true
 
             } catch (e: Exception) {
                 // No mostrar error si fue una cancelación intencionada
@@ -163,8 +168,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } finally {
+                // Si se cierra la app a medio mensaje se pierde, guardar a medias TODO()
                 // Guarda el mensaje aunque se cancele
-                if (botMensajeIndex != -1 && botMensajeIndex < mensajes.size) {
+                if (!guardado && botMensajeIndex != -1 && botMensajeIndex < mensajes.size) {
                     val contenidoParcial = mensajes[botMensajeIndex].contenido
 
                     if (contenidoParcial.isNotBlank()) {

@@ -72,6 +72,9 @@ dependencies {
     implementation("com.composables:icons-lucide:1.0.0")
     implementation("io.coil-kt:coil-compose:2.7.0") // AsyncImages
 
+    // Tema
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     // Accompanist
     implementation("com.google.accompanist:accompanist-permissions:0.31.1-alpha")
 

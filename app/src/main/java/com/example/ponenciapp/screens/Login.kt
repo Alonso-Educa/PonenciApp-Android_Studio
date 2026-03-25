@@ -1,6 +1,9 @@
 package com.example.ponenciapp.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -50,19 +54,21 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.room.Room
+import com.example.ponenciapp.R
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.participante.formatearFechaHora
+import com.example.ponenciapp.screens.utilidad.ThemeViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 @Composable
-fun Login(navController: NavController) {
+fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
 
     // Variables usadas
     val context = LocalContext.current
@@ -93,6 +99,7 @@ fun Login(navController: NavController) {
     // Contenido del login
     Column(
         modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -100,6 +107,15 @@ fun Login(navController: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
         // Logo y título
+        Image(
+            painter = if (themeViewModel.isDarkTheme) {
+                painterResource(R.drawable.logotemaoscuro)
+            } else {
+                painterResource(R.drawable.logotemaclaro)
+            },
+            contentDescription = "Logo",
+            modifier = Modifier.size(150.dp).padding(bottom = 16.dp)
+        )
         Text(
             text = "PonenciApp",
             fontSize = 32.sp,
@@ -109,7 +125,7 @@ fun Login(navController: NavController) {
         Text(
             text = "Accede con tu email y contraseña del evento",
             fontSize = 14.sp,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
         )
@@ -249,7 +265,7 @@ fun Login(navController: NavController) {
             // Si está cargando muestra un iconito de carga
             if (estaCargando) {
                 CircularProgressIndicator(
-                    color = Color.White, modifier = Modifier.size(24.dp)
+                    color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp)
                 )
             } else {
                 Text("Iniciar sesión", fontSize = 16.sp)
@@ -263,7 +279,7 @@ fun Login(navController: NavController) {
         Text(
             "Si no tienes una cuenta, regístrate aquí",
             fontSize = 12.sp,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(vertical = 8.dp)
         )
         OutlinedButton(
@@ -298,7 +314,10 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
         Card(
             shape = MaterialTheme.shapes.large,
             elevation = CardDefaults.cardElevation(8.dp),
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -314,7 +333,7 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
                     "Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.",
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = emailRecuperar,

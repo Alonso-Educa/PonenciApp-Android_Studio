@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,9 +47,8 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
-import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
 import com.example.ponenciapp.screens.comun.EscanerQR
-import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
@@ -242,7 +240,7 @@ fun CheckInQR(navController: NavController) {
                 Text(
                     "Tu asistencia al evento ha sido registrada correctamente.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 // Si no se ha realizado el checkin le pide al usuario que escanee el qr
@@ -263,7 +261,7 @@ fun CheckInQR(navController: NavController) {
                 Text(
                     "Escanea el código QR del evento para registrar tu asistencia.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(32.dp))

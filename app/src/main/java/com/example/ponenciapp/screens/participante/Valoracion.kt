@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -56,13 +54,10 @@ import com.example.ponenciapp.data.bbdd.entities.ValoracionData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
-import com.example.ponenciapp.screens.comun.BottomBarUnirseEvento
-import com.example.ponenciapp.screens.comun.IconoUsuario
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
-import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,7 +143,9 @@ fun Valoracion(navController: NavController) {
                             idEvento = idEvento,
                             orden = doc.getLong("orden")?.toInt() ?: 0
                         )
-                    } catch (e: Exception) { null }
+                    } catch (e: Exception) {
+                        null
+                    }
                 }.sortedBy { it.orden }
                 scope.launch {
                     ponenciaDao.insertarTodas(lista)
@@ -160,7 +157,11 @@ fun Valoracion(navController: NavController) {
                 scope.launch {
                     listaPonencias = ponenciaDao.getPonenciasDeEvento(idEvento)
                     isLoading = false
-                    Toast.makeText(context, "Sin conexión, mostrando datos guardados", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Sin conexión, mostrando datos guardados",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
 
@@ -253,7 +254,11 @@ fun Valoracion(navController: NavController) {
 
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -267,7 +272,7 @@ fun Valoracion(navController: NavController) {
                         Text(
                             "¿Cómo valorarías el evento en general?",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         SelectorEstrellas(
                             puntuacion = puntuacionEvento,
@@ -293,7 +298,11 @@ fun Valoracion(navController: NavController) {
 
             items(listaPonencias) { ponencia ->
                 Card(
-                    modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -307,7 +316,7 @@ fun Valoracion(navController: NavController) {
                         Text(
                             "¿Cómo valorarías la ponencia en general?",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         SelectorEstrellas(
                             puntuacion = puntuacionesPonencias[ponencia.idPonencia] ?: 0,

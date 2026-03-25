@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
@@ -42,7 +41,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,8 +74,6 @@ import androidx.navigation.NavController
 import androidx.room.Room
 import com.composables.icons.lucide.CalendarDays
 import com.composables.icons.lucide.Clock
-import com.composables.icons.lucide.File
-import com.composables.icons.lucide.FileSpreadsheet
 import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
@@ -86,8 +82,6 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.data.generarQRBitmap
 import com.example.ponenciapp.navigation.AppScreens
-import com.example.ponenciapp.screens.comun.exportarAsistenciasExcel
-import com.example.ponenciapp.screens.comun.exportarAsistenciasPdf
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -392,7 +386,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                     Text(
                                         evento?.descripcion ?: "",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = Color.Gray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -463,12 +457,12 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "No hay ponencias todavía",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             "Pulsa el botón + para añadir una",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -488,7 +482,10 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                         )
                                     )
                                 },
-                            elevation = CardDefaults.cardElevation(2.dp)
+                            elevation = CardDefaults.cardElevation(2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
@@ -520,7 +517,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                     Text(
                                         ponencia.ponente,
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.Gray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
@@ -531,7 +528,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                         Text(
                                             " ${ponencia.horaInicio} - ${ponencia.horaFin}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -868,7 +865,10 @@ fun DialogMostrarQR(
         Card(
             shape = MaterialTheme.shapes.large,
             elevation = CardDefaults.cardElevation(8.dp),
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
@@ -889,7 +889,7 @@ fun DialogMostrarQR(
                 Text(
                     contenidoQR,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
                 Button(onClick = onDismiss) {

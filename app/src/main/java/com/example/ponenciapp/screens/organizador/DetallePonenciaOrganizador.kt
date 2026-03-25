@@ -336,7 +336,8 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ), modifier = Modifier.fillMaxWidth()
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
@@ -354,7 +355,7 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                             Text(
                                 "Horario",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 "${p.horaInicio} - ${p.horaFin}",
@@ -397,7 +398,7 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                     Text(
                         p.descripcion,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
