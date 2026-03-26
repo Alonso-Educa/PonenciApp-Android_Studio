@@ -12,7 +12,20 @@
           "package_name": "com.example.ponenciapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "782692490355-49c6t3j8vif6t8qjcrg7un5p8f2lhsn0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ponenciapp",
+            "certificate_hash": "122c377bdfe10b15970b3b495fd9ef7648a59139"
+          }
+        },
+        {
+          "client_id": "782692490355-e7tm8sbdejbksdfkr21f4h02astdu4oo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCTi6esLaEHtyNvs6Ex7vxWfMYeP5Og9XQ"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "782692490355-e7tm8sbdejbksdfkr21f4h02astdu4oo.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "782692490355-6qqcqkic1cdfnjr2bs1p4vn94v26uhmh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ponenciapp"
+              }
+            }
+          ]
         }
       }
     }

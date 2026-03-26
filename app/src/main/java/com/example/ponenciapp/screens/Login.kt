@@ -1,53 +1,30 @@
 package com.example.ponenciapp.screens
 
+import android.app.Activity
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,75 +36,90 @@ import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
-import com.example.ponenciapp.notification.NotificationHandler
-import com.example.ponenciapp.screens.participante.formatearFechaHora
 import com.example.ponenciapp.screens.utilidad.ThemeViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.firebase.Firebase
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.example.ponenciapp.data.bbdd.dao.ParticipanteDao
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import kotlinx.coroutines.CoroutineScope
+import android.content.Context
 
 @Composable
 fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
 
-    // Variables usadas
     val context = LocalContext.current
+    val activity = context as Activity
     val scope = rememberCoroutineScope()
     val auth = Firebase.auth
     val firestore = FirebaseFirestore.getInstance()
 
-    // Base de datos de room
     val db = remember {
         Room.databaseBuilder(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-
     val participanteDao = db.participanteDao()
 
-    // Campos de texto
     var email by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var estaCargando by remember { mutableStateOf(false) }
+    var estaCargandoEmail by remember { mutableStateOf(false) }
+    var estaCargandoGoogle by remember { mutableStateOf(false) }
+    var estaCargandoMicrosoft by remember { mutableStateOf(false) }
     var showDialogRecuperar by remember { mutableStateOf(false) }
 
     val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
-    var showDialogRegistro by remember { mutableStateOf(false) }
+    // Google Sign-In
+    val credentialManager = remember { CredentialManager.create(context) }
 
-    // Contenido del login
+    @Suppress("LocalContextGetResourceValueCall")
+    val webClientId = remember {
+        context.getString(R.string.default_web_client_id)
+    }
+
     Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.background)
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         // Logo y título
         Image(
-            painter = if (themeViewModel.isDarkTheme) {
-                painterResource(R.drawable.logotemaoscuro)
-            } else {
-                painterResource(R.drawable.logotemaclaro)
-            },
+            painter = if (themeViewModel.isDarkTheme) painterResource(R.drawable.logotemaoscuro)
+            else painterResource(R.drawable.logotemaclaro),
             contentDescription = "Logo",
-            modifier = Modifier.size(150.dp).padding(bottom = 16.dp)
+            modifier = Modifier
+                .size(120.dp)
         )
         Text(
             text = "PonenciApp",
-            fontSize = 32.sp,
+            fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Accede con tu email y contraseña del evento",
+            text = "Accede con tu email y contraseña al evento",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
         )
 
         // Email
@@ -141,7 +133,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Contraseña
         OutlinedTextField(
@@ -167,29 +159,35 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Recuperar contraseña
         TextButton(
-            onClick = { showDialogRecuperar = true }, modifier = Modifier.align(Alignment.End)
+            onClick = { showDialogRecuperar = true },
+            modifier = Modifier.align(Alignment.End)
         ) {
             Text("¿Has olvidado tu contraseña?")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Botón de iniciar sesión
+        // Botón de iniciar sesión con email/contraseña
         Button(
             onClick = {
                 when {
                     email.isBlank() -> Toast.makeText(
-                        context, "Introduce tu email", Toast.LENGTH_SHORT
+                        context,
+                        "Introduce tu email",
+                        Toast.LENGTH_SHORT
                     ).show()
 
                     !emailPattern.matches(email) -> Toast.makeText(
-                        context, "Formato de email inválido", Toast.LENGTH_SHORT
+                        context,
+                        "Formato de email inválido",
+                        Toast.LENGTH_SHORT
                     ).show()
 
                     contrasena.isBlank() -> Toast.makeText(
-                        context, "Introduce tu contraseña", Toast.LENGTH_SHORT
+                        context,
+                        "Introduce tu contraseña",
+                        Toast.LENGTH_SHORT
                     ).show()
 
                     contrasena.length < 6 -> Toast.makeText(
@@ -198,17 +196,29 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                         Toast.LENGTH_SHORT
                     ).show()
 
+                    // descomentar esto para validar contraseña correctamente TODO()
+//                    contrasena.length < 10 -> Toast.makeText(
+//                        context,
+//                        "La contraseña debe tener al menos 10 caracteres",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//
+//                    !contrasena.any { !it.isLetterOrDigit() } -> Toast.makeText(
+//                        context,
+//                        "La contraseña debe contener al menos un carácter especial",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+
                     else -> {
-                        estaCargando = true
+                        estaCargandoEmail = true
                         auth.signInWithEmailAndPassword(email, contrasena)
                             .addOnSuccessListener { result ->
                                 val uid = result.user?.uid ?: ""
-                                // Email actual en Firebase Auth
                                 val emailActualAuth = result.user?.email ?: ""
                                 firestore.collection("participantes").document(uid).get()
                                     .addOnSuccessListener { doc ->
                                         if (!doc.exists()) {
-                                            estaCargando = false
+                                            estaCargandoEmail = false
                                             Toast.makeText(
                                                 context,
                                                 "No se encontraron datos del usuario",
@@ -217,8 +227,6 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                             return@addOnSuccessListener
                                         }
                                         val emailEnFirestore = doc.getString("emailEduca") ?: ""
-
-                                        // Si el email de Auth es diferente al de Firestore, actualizar Firestore
                                         if (emailActualAuth != emailEnFirestore) {
                                             firestore.collection("participantes").document(uid)
                                                 .update("emailEduca", emailActualAuth)
@@ -229,76 +237,257 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                                     idParticipante = uid,
                                                     nombre = doc.getString("nombre") ?: "",
                                                     apellidos = doc.getString("apellidos") ?: "",
-                                                    emailEduca = doc.getString("emailEduca") ?: "", // ← se actualiza al hacer login
+                                                    emailEduca = doc.getString("emailEduca") ?: "",
                                                     centro = doc.getString("centro") ?: "",
-                                                    codigoCentro = doc.getString("codigoCentro") ?: "",
+                                                    codigoCentro = doc.getString("codigoCentro")
+                                                        ?: "",
                                                     rol = doc.getString("rol") ?: "participante",
-                                                    fechaRegistro = doc.getString("fechaRegistro") ?: "",
+                                                    fechaRegistro = doc.getString("fechaRegistro")
+                                                        ?: "",
                                                     idEvento = doc.getString("idEvento") ?: ""
                                                 )
                                             )
-                                            estaCargando = false
+                                            estaCargandoEmail = false
                                             navController.navigate(AppScreens.PantallaPrincipal.route) {
                                                 popUpTo(0) { inclusive = true }
                                             }
                                         }
                                     }.addOnFailureListener { e ->
-                                        estaCargando = false
+                                        estaCargandoEmail = false
                                         Toast.makeText(
                                             context,
-                                            "Error obteniendo datos del usuario: ${e.message}",
+                                            "Error obteniendo datos: ${e.message}",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
                             }.addOnFailureListener {
-                                estaCargando = false
+                                estaCargandoEmail = false
                                 Toast.makeText(
-                                    context, "Email o contraseña incorrectos", Toast.LENGTH_SHORT
+                                    context,
+                                    "Email o contraseña incorrectos",
+                                    Toast.LENGTH_SHORT
                                 ).show()
                             }
                     }
                 }
-            }, modifier = Modifier
+            },
+            modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp), enabled = !estaCargando
+                .height(50.dp),
+            enabled = !estaCargandoEmail && !estaCargandoGoogle && !estaCargandoMicrosoft
         ) {
-            // Si está cargando muestra un iconito de carga
-            if (estaCargando) {
+            if (estaCargandoEmail) {
                 CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp)
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
                 )
             } else {
                 Text("Iniciar sesión", fontSize = 16.sp)
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Botón de registrarse. quizá se quite más adelante
+        Spacer(modifier = Modifier.height(10.dp))
         HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "O inicia sesión con",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        // Fila de botones para login externo
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Botón de login con Google
+            OutlinedButton(
+                onClick = {
+                    estaCargandoGoogle = true
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setServerClientId(webClientId)
+                        .setFilterByAuthorizedAccounts(false)
+                        .build()
+
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+
+                    scope.launch {
+                        try {
+                            val result = credentialManager.getCredential(
+                                context = context,
+                                request = request
+                            )
+                            val credential = result.credential
+                            if (credential is CustomCredential &&
+                                credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                            ) {
+                                val googleIdTokenCredential =
+                                    GoogleIdTokenCredential.createFrom(credential.data)
+                                val firebaseCredential = GoogleAuthProvider.getCredential(
+                                    googleIdTokenCredential.idToken, null
+                                )
+                                auth.signInWithCredential(firebaseCredential)
+                                    .addOnSuccessListener { authResult ->
+                                        val uid = authResult.user?.uid ?: ""
+                                        val emailUser = authResult.user?.email ?: ""
+                                        val displayName = authResult.user?.displayName ?: ""
+                                        handleOAuthLoginSuccess(
+                                            uid = uid,
+                                            emailUser = emailUser,
+                                            displayName = displayName,
+                                            provider = "google",
+                                            firestore = firestore,
+                                            participanteDao = participanteDao,
+                                            scope = scope,
+                                            navController = navController,
+                                            context = context,
+                                            onCargando = {
+                                                estaCargandoGoogle = false
+                                                estaCargandoMicrosoft = false
+                                            }
+                                        )
+                                    }
+                                    .addOnFailureListener { e ->
+                                        estaCargandoGoogle = false
+                                        Toast.makeText(
+                                            context,
+                                            "Error con Google: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                            } else {
+                                estaCargandoGoogle = false
+                                Toast.makeText(
+                                    context,
+                                    "Credencial no reconocida",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        } catch (e: GetCredentialException) {
+                            estaCargandoGoogle = false
+                            Toast.makeText(
+                                context,
+                                "Error con Google: ${e.localizedMessage}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                enabled = !estaCargandoEmail && !estaCargandoGoogle && !estaCargandoMicrosoft,
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                if (estaCargandoGoogle) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.google_logo),
+                        contentDescription = "Google",
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Google", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Botón de login con microsoft
+            OutlinedButton(
+                onClick = {
+                    estaCargandoMicrosoft = true
+                    val provider = OAuthProvider.newBuilder("microsoft.com")
+                        .addCustomParameter("tenant", "common")
+                        .setScopes(listOf("email", "profile", "openid"))
+                        .build()
+
+                    auth.startActivityForSignInWithProvider(activity, provider)
+                        .addOnSuccessListener { authResult ->
+                            val uid = authResult.user?.uid ?: ""
+                            val emailUser = authResult.user?.email ?: ""
+                            val displayName = authResult.user?.displayName ?: ""
+                            handleOAuthLoginSuccess(
+                                uid = uid,
+                                emailUser = emailUser,
+                                displayName = displayName,
+                                provider = "google",
+                                firestore = firestore,
+                                participanteDao = participanteDao,
+                                scope = scope,
+                                navController = navController,
+                                context = context,
+                                onCargando = {
+                                    estaCargandoGoogle = false
+                                    estaCargandoMicrosoft = false
+                                }
+                            )
+                        }
+                        .addOnFailureListener { e ->
+                            estaCargandoMicrosoft = false
+                            Toast.makeText(
+                                context,
+                                "Error con Microsoft: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(50.dp),
+                enabled = !estaCargandoEmail && !estaCargandoGoogle && !estaCargandoMicrosoft,
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                if (estaCargandoMicrosoft) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.microsoft_logo),
+                        contentDescription = "Microsoft",
+                        modifier = Modifier.size(30.dp),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Microsoft", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             "Si no tienes una cuenta, regístrate aquí",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 8.dp)
+            modifier = Modifier.padding(bottom = 4.dp)
         )
+
         OutlinedButton(
-            onClick = { showDialogRegistro = true }, modifier = Modifier.fillMaxWidth()
+            onClick = {
+                navController.navigate(
+                    AppScreens.RegistroUsuario.createRoute("email", "", "", "")
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Registrarse")
         }
     }
 
-    // Dialog de recuperar contraseña
     if (showDialogRecuperar) {
-        DialogRecuperarContrasena(
-            onDismiss = { showDialogRecuperar = false })
-    }
-
-
-    // Muestra el dialog de registro
-    if (showDialogRegistro) {
-        DialogRegistro(onDismiss = { showDialogRegistro = false })
+        DialogRecuperarContrasena(onDismiss = { showDialogRecuperar = false })
     }
 }
 
@@ -361,17 +550,17 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
 
                             else -> {
                                 auth.sendPasswordResetEmail(emailRecuperar).addOnSuccessListener {
-                                        Toast.makeText(
-                                            context,
-                                            "Email de recuperación enviado",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        onDismiss()
-                                    }.addOnFailureListener {
-                                        Toast.makeText(
-                                            context, "Error enviando el email", Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                    Toast.makeText(
+                                        context,
+                                        "Email de recuperación enviado",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    onDismiss()
+                                }.addOnFailureListener {
+                                    Toast.makeText(
+                                        context, "Error enviando el email", Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                     }) {
@@ -383,219 +572,55 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
     }
 }
 
-// Función para mostrar el dialog de registro
-@Composable
-fun DialogRegistro(
-    onDismiss: () -> Unit
+// Función reutilizable: tras cualquier login OAuth, comprobar si el usuario ya existe en Firestore
+fun handleOAuthLoginSuccess(
+    uid: String,
+    emailUser: String,
+    displayName: String,
+    provider: String,
+    firestore: FirebaseFirestore,
+    participanteDao: ParticipanteDao,
+    scope: CoroutineScope,
+    navController: NavController,
+    context: Context,
+    onCargando: (Boolean) -> Unit
 ) {
-    val context = LocalContext.current
-    val auth = Firebase.auth
-    val firestore = FirebaseFirestore.getInstance()
-    val scope = rememberCoroutineScope()
-
-    val db = remember {
-        Room.databaseBuilder(
-            context.applicationContext, AppDB::class.java, Estructura.DB.NAME
-        ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
-    }
-    val participanteDao = db.participanteDao()
-
-    var nombre by remember { mutableStateOf("") }
-    var apellidos by remember { mutableStateOf("") }
-    var emailEduca by remember { mutableStateOf("") }
-    var centro by remember { mutableStateOf("") }
-    var codigoCentro by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-    var isLoading by remember { mutableStateOf(false) }
-
-    val notificationHandler = NotificationHandler(context)
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = MaterialTheme.shapes.large,
-            elevation = CardDefaults.cardElevation(8.dp),
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Registra tu cuenta",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = apellidos,
-                    onValueChange = { apellidos = it },
-                    label = { Text("Apellidos") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = emailEduca,
-                    onValueChange = { emailEduca = it },
-                    label = { Text("Email educativo") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = centro,
-                    onValueChange = { centro = it },
-                    label = { Text("Centro educativo") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = codigoCentro,
-                    onValueChange = { codigoCentro = it },
-                    label = { Text("Código de centro") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Contraseña") },
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                else Icons.Default.Visibility, contentDescription = null
-                            )
-                        }
-                    },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None
-                    else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    Button(
-                        onClick = {
-                            when {
-                                nombre.isBlank() -> Toast.makeText(
-                                    context, "Introduce el nombre", Toast.LENGTH_SHORT
-                                ).show()
-
-                                apellidos.isBlank() -> Toast.makeText(
-                                    context, "Introduce los apellidos", Toast.LENGTH_SHORT
-                                ).show()
-
-                                emailEduca.isBlank() -> Toast.makeText(
-                                    context, "Introduce el email", Toast.LENGTH_SHORT
-                                ).show()
-
-                                !emailPattern.matches(emailEduca) -> Toast.makeText(
-                                    context, "Formato de email inválido", Toast.LENGTH_SHORT
-                                ).show()
-
-                                centro.isBlank() -> Toast.makeText(
-                                    context, "Introduce el centro", Toast.LENGTH_SHORT
-                                ).show()
-
-                                codigoCentro.isBlank() -> Toast.makeText(
-                                    context, "Introduce el código de centro", Toast.LENGTH_SHORT
-                                ).show()
-
-                                // Cambiar minimo de caracteres y pedir caracter especial TODO
-                                password.length < 6 -> Toast.makeText(
-                                    context,
-                                    "La contraseña debe tener al menos 6 caracteres",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-
-                                else -> {
-                                    isLoading = true
-                                    auth.createUserWithEmailAndPassword(emailEduca, password)
-                                        .addOnSuccessListener { result ->
-                                            val uid = result.user?.uid ?: ""
-                                            val data = mapOf(
-                                                "nombre" to nombre,
-                                                "apellidos" to apellidos,
-                                                "emailEduca" to emailEduca,
-                                                "centro" to centro,
-                                                "codigoCentro" to codigoCentro,
-                                                "rol" to "participante",
-                                                "fechaRegistro" to formatearFechaHora()
-                                            )
-                                            firestore.collection("participantes").document(uid)
-                                                .set(data).addOnSuccessListener {
-                                                    scope.launch {
-                                                        participanteDao.insertar(
-                                                            ParticipanteData(
-                                                                idParticipante = uid,
-                                                                nombre = nombre,
-                                                                apellidos = apellidos,
-                                                                emailEduca = emailEduca,
-                                                                centro = centro,
-                                                                codigoCentro = codigoCentro,
-                                                                rol = "participante",
-                                                                fechaRegistro = formatearFechaHora()
-                                                            )
-                                                        )
-                                                        isLoading = false
-                                                        Toast.makeText(
-                                                            context,
-                                                            "Cuenta creada correctamente",
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                        onDismiss()
-                                                        // Cerrar sesión tras registrar para que el usuario haga login manualmente
-                                                        auth.signOut()
-                                                        notificationHandler.enviarNotificacionSimple(
-                                                            "Registro exitoso", "¡Bienvenido a PonenciApp, $nombre!"
-                                                        )
-                                                    }
-                                                }.addOnFailureListener { e ->
-                                                    isLoading = false
-                                                    // Si falla Firestore, elimina la cuenta de Auth para no dejar datos sin registrar
-                                                    auth.currentUser?.delete()
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Error guardando datos: ${e.message}",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                        }.addOnFailureListener { e ->
-                                            isLoading = false
-                                            Toast.makeText(
-                                                context,
-                                                "Error creando cuenta: ${e.message}",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                }
-                            }
-                        }, enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                color = Color.White, modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            Text("Registrar")
-                        }
+    firestore.collection("participantes").document(uid).get()
+        .addOnSuccessListener { doc ->
+            onCargando(false)
+            if (doc.exists()) {
+                scope.launch {
+                    participanteDao.insertar(
+                        ParticipanteData(
+                            idParticipante = uid,
+                            nombre = doc.getString("nombre") ?: "",
+                            apellidos = doc.getString("apellidos") ?: "",
+                            emailEduca = doc.getString("emailEduca") ?: "",
+                            centro = doc.getString("centro") ?: "",
+                            codigoCentro = doc.getString("codigoCentro") ?: "",
+                            rol = doc.getString("rol") ?: "participante",
+                            fechaRegistro = doc.getString("fechaRegistro") ?: "",
+                            idEvento = doc.getString("idEvento") ?: ""
+                        )
+                    )
+                    navController.navigate(AppScreens.PantallaPrincipal.route) {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
+            } else {
+                navController.navigate(
+                    AppScreens.RegistroUsuario.createRoute(
+                        provider = provider,
+                        uid = uid,
+                        email = emailUser,
+                        displayName = displayName
+                    )
+                )
             }
         }
-    }
+        .addOnFailureListener { e ->
+            onCargando(false)
+            Toast.makeText(context, "Error verificando usuario: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
 }

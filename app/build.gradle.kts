@@ -99,6 +99,12 @@ dependencies {
     implementation("org.apache.poi:poi:5.2.0")
     implementation("org.apache.poi:poi-ooxml:5.2.0")
 
+    // Login con google
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
     // ---------------- ROOM ----------------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

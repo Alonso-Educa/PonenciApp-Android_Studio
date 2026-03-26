@@ -1,5 +1,7 @@
 package com.example.ponenciapp.navigation
 
+import android.net.Uri
+
 sealed class AppScreens(val route: String) {
     object Login : AppScreens("Login")
     object PantallaPrincipal : AppScreens("PantallaPrincipal")
@@ -12,13 +14,27 @@ sealed class AppScreens(val route: String) {
     object DetalleEvento : AppScreens("DetalleEvento/{idEvento}") {
         fun createRoute(idEvento: String) = "DetalleEvento/$idEvento"
     }
+
     object DetallePonenciaParticipante : AppScreens("DetallePonenciaParticipante/{idPonencia}") {
         fun createRoute(idPonencia: String) = "DetallePonenciaParticipante/$idPonencia"
     }
+
     object DetallePonenciaOrganizador : AppScreens("DetallePonenciaOrganizador/{idPonencia}") {
         fun createRoute(idPonencia: String) = "DetallePonenciaOrganizador/$idPonencia"
     }
+
     object ChatbotAsistente : AppScreens("ChatbotAsistente")
+
+    object RegistroUsuario : AppScreens(
+        "registro/{provider}/{uid}/{email}/{displayName}"
+    ) {
+        fun createRoute(provider: String, uid: String, email: String, displayName: String) =
+            "registro/${Uri.encode(provider)}/${Uri.encode(uid)}/${Uri.encode(email)}/${
+                Uri.encode(
+                    displayName
+                )
+            }"
+    }
 
     companion object {
         fun fromRoute(route: String): AppScreens? {

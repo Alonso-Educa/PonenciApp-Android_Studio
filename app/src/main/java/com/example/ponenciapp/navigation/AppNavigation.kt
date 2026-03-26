@@ -10,8 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.ponenciapp.screens.Login
-import com.example.ponenciapp.screens.PantallaPrincipal
+import com.example.ponenciapp.screens.*
 import com.example.ponenciapp.screens.comun.*
 import com.example.ponenciapp.screens.organizador.*
 import com.example.ponenciapp.screens.participante.*
@@ -115,6 +114,23 @@ fun AppNavigation(destinoNotificacion: String? = null, themeViewModel: ThemeView
         ) { backStackEntry ->
             val idPonencia = backStackEntry.arguments?.getString("idPonencia") ?: ""
             DetallePonenciaOrganizador(navController, idPonencia)
+        }
+        composable(
+            route = AppScreens.RegistroUsuario.route,
+            arguments = listOf(
+                navArgument("provider") { type = NavType.StringType },
+                navArgument("uid") { type = NavType.StringType },
+                navArgument("email") { type = NavType.StringType },
+                navArgument("displayName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            RegistroUsuario(
+                navController = navController,
+                provider = backStackEntry.arguments?.getString("provider") ?: "email",
+                uid = backStackEntry.arguments?.getString("uid") ?: "",
+                emailExterno = backStackEntry.arguments?.getString("email") ?: "",
+                displayName = backStackEntry.arguments?.getString("displayName") ?: ""
+            )
         }
     }
 }
