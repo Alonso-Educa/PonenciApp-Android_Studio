@@ -81,7 +81,9 @@ fun UnirseEvento(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(participante = it) }
+                    participante?.let { IconoUsuario(
+                        usuario = it
+                    ) }
                 }
             )
         },
@@ -170,8 +172,9 @@ fun UnirseEvento(navController: NavController) {
                                                     lugar = doc.getString("lugar") ?: "",
                                                     descripcion = doc.getString("descripcion")
                                                         ?: "",
-                                                    contrasena = doc.getString("contrasena") ?: "",
                                                     codigoEvento = doc.getString("codigoEvento")
+                                                        ?: "",
+                                                    idOrganizador = doc.getString("idOrganizador")
                                                         ?: ""
                                                 )
                                             )

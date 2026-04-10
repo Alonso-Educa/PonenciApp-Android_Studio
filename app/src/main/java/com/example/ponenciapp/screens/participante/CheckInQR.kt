@@ -126,7 +126,9 @@ fun CheckInQR(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(participante = it) }
+                    participante?.let { IconoUsuario(
+                        usuario = it
+                    ) }
                 }
             )
         },

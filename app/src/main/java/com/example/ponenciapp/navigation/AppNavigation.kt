@@ -126,10 +126,11 @@ fun AppNavigation(destinoNotificacion: String? = null, themeViewModel: ThemeView
         ) { backStackEntry ->
             RegistroUsuario(
                 navController = navController,
-                provider = backStackEntry.arguments?.getString("provider") ?: "email",
+                proveedor = backStackEntry.arguments?.getString("provider") ?: "email",
                 uid = backStackEntry.arguments?.getString("uid") ?: "",
                 emailExterno = backStackEntry.arguments?.getString("email") ?: "",
-                displayName = backStackEntry.arguments?.getString("displayName") ?: ""
+                displayName = backStackEntry.arguments?.getString("displayName") ?: "",
+                fotoUrlExterno = backStackEntry.arguments?.getString("fotoUrl") ?: ""
             )
         }
     }

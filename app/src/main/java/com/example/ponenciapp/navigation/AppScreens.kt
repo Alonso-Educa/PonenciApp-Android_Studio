@@ -26,14 +26,14 @@ sealed class AppScreens(val route: String) {
     object ChatbotAsistente : AppScreens("ChatbotAsistente")
 
     object RegistroUsuario : AppScreens(
-        "registro/{provider}/{uid}/{email}/{displayName}"
+        "registro/{provider}/{uid}/{email}/{displayName}/{fotoUrl}"
     ) {
-        fun createRoute(provider: String, uid: String, email: String, displayName: String) =
+        fun createRoute(provider: String, uid: String, email: String, displayName: String, fotoUrl: String) =
             "registro/${Uri.encode(provider)}/${Uri.encode(uid)}/${Uri.encode(email)}/${
                 Uri.encode(
                     displayName
                 )
-            }"
+            }/${Uri.encode(fotoUrl)}"
     }
 
     companion object {

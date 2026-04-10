@@ -1,13 +1,9 @@
 package com.example.ponenciapp.screens
 
 import android.app.Activity
-import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,10 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
@@ -37,9 +31,6 @@ import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.utilidad.ThemeViewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
@@ -56,6 +47,10 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import kotlinx.coroutines.CoroutineScope
 import android.content.Context
+import com.example.ponenciapp.screens.utilidad.getFotoMicrosoft
+import com.example.ponenciapp.screens.utilidad.saveBytesToTempUri
+import com.example.ponenciapp.screens.utilidad.subirImagenCloudinary
+import com.google.firebase.auth.OAuthCredential
 
 @Composable
 fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
@@ -232,6 +227,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                                 .update("emailEduca", emailActualAuth)
                                         }
                                         scope.launch {
+                                            val fotoPerfil = doc.getString("fotoPerfilUrl") ?: ""
                                             participanteDao.insertar(
                                                 ParticipanteData(
                                                     idParticipante = uid,
@@ -244,7 +240,8 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                                     rol = doc.getString("rol") ?: "participante",
                                                     fechaRegistro = doc.getString("fechaRegistro")
                                                         ?: "",
-                                                    idEvento = doc.getString("idEvento") ?: ""
+                                                    idEvento = doc.getString("idEvento") ?: "",
+                                                    fotoPerfilUrl = fotoPerfil
                                                 )
                                             )
                                             estaCargandoEmail = false
@@ -303,6 +300,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Botón de login con Google
+            // Google sobreescribe el proveedor de email/contraseña si no se vincula desde ajustes antes TODO()
             OutlinedButton(
                 onClick = {
                     estaCargandoGoogle = true
@@ -335,6 +333,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                         val uid = authResult.user?.uid ?: ""
                                         val emailUser = authResult.user?.email ?: ""
                                         val displayName = authResult.user?.displayName ?: ""
+                                        val photoUrlGoogle = authResult.user?.photoUrl?.toString() ?: ""
                                         handleOAuthLoginSuccess(
                                             uid = uid,
                                             emailUser = emailUser,
@@ -348,7 +347,8 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                             onCargando = {
                                                 estaCargandoGoogle = false
                                                 estaCargandoMicrosoft = false
-                                            }
+                                            },
+                                            fotoUrlProveedor = photoUrlGoogle
                                         )
                                     }
                                     .addOnFailureListener { e ->
@@ -406,29 +406,73 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                     estaCargandoMicrosoft = true
                     val provider = OAuthProvider.newBuilder("microsoft.com")
                         .addCustomParameter("tenant", "common")
-                        .setScopes(listOf("email", "profile", "openid"))
+                        .setScopes(listOf("email", "profile", "openid", "User.Read"))
                         .build()
 
+                    // Iniciar sesión con Microsoft
                     auth.startActivityForSignInWithProvider(activity, provider)
                         .addOnSuccessListener { authResult ->
                             val uid = authResult.user?.uid ?: ""
                             val emailUser = authResult.user?.email ?: ""
                             val displayName = authResult.user?.displayName ?: ""
-                            handleOAuthLoginSuccess(
-                                uid = uid,
-                                emailUser = emailUser,
-                                displayName = displayName,
-                                provider = "google",
-                                firestore = firestore,
-                                participanteDao = participanteDao,
-                                scope = scope,
-                                navController = navController,
-                                context = context,
-                                onCargando = {
-                                    estaCargandoGoogle = false
-                                    estaCargandoMicrosoft = false
+                            val credential = authResult.credential as? OAuthCredential
+                            val accessToken = credential?.accessToken
+
+                            if (accessToken != null) {
+                                scope.launch {
+                                    try {
+                                        val bytes = getFotoMicrosoft(accessToken)
+                                        if (bytes != null) {
+                                            // Guardar la foto en un archivo temporal
+                                            val tempUri = saveBytesToTempUri(context, bytes, "$uid-profile.jpg")
+                                            if (tempUri != null) {
+                                                subirImagenCloudinary(context, tempUri, uid) { cloudUrl ->
+
+                                                    handleOAuthLoginSuccess(
+                                                        uid = uid,
+                                                        emailUser = emailUser,
+                                                        displayName = displayName,
+                                                        provider = "microsoft",
+                                                        firestore = firestore,
+                                                        participanteDao = participanteDao,
+                                                        scope = scope,
+                                                        navController = navController,
+                                                        context = context,
+                                                        onCargando = {
+                                                            estaCargandoGoogle = false
+                                                            estaCargandoMicrosoft = false
+                                                        },
+                                                        fotoUrlProveedor = cloudUrl
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            "Error al obtener la foto: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
-                            )
+                            } else {
+                                handleOAuthLoginSuccess(
+                                    uid = uid,
+                                    emailUser = emailUser,
+                                    displayName = displayName,
+                                    provider = "microsoft",
+                                    firestore = firestore,
+                                    participanteDao = participanteDao,
+                                    scope = scope,
+                                    navController = navController,
+                                    context = context,
+                                    onCargando = {
+                                        estaCargandoGoogle = false
+                                        estaCargandoMicrosoft = false
+                                    },
+                                    fotoUrlProveedor = null
+                                )
+                            }
                         }
                         .addOnFailureListener { e ->
                             estaCargandoMicrosoft = false
@@ -477,7 +521,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
         OutlinedButton(
             onClick = {
                 navController.navigate(
-                    AppScreens.RegistroUsuario.createRoute("email", "", "", "")
+                    AppScreens.RegistroUsuario.createRoute("email", "", "", "", "")
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -583,13 +627,22 @@ fun handleOAuthLoginSuccess(
     scope: CoroutineScope,
     navController: NavController,
     context: Context,
-    onCargando: (Boolean) -> Unit
+    onCargando: (Boolean) -> Unit,
+    fotoUrlProveedor: String? =  null
 ) {
     firestore.collection("participantes").document(uid).get()
         .addOnSuccessListener { doc ->
             onCargando(false)
             if (doc.exists()) {
                 scope.launch {
+
+                    // Obtener la foto de perfil del usuario
+                    val fotoPerfil = doc.getString("fotoPerfilUrl")
+                        ?.takeIf { it.isNotEmpty() } // Usa la de Firestore si existe
+                        ?: fotoUrlProveedor // Sino, usa la de Google/Microsoft
+                        ?: "" // Sino, vacío
+
+                    // Inserta el participante en la base de datos
                     participanteDao.insertar(
                         ParticipanteData(
                             idParticipante = uid,
@@ -600,9 +653,19 @@ fun handleOAuthLoginSuccess(
                             codigoCentro = doc.getString("codigoCentro") ?: "",
                             rol = doc.getString("rol") ?: "participante",
                             fechaRegistro = doc.getString("fechaRegistro") ?: "",
-                            idEvento = doc.getString("idEvento") ?: ""
+                            idEvento = doc.getString("idEvento") ?: "",
+                            fotoPerfilUrl = fotoPerfil
                         )
                     )
+
+                    // Guarda en Firestore si no había foto
+                    if (doc.getString("fotoPerfilUrl").isNullOrEmpty() && fotoPerfil.isNotEmpty()) {
+                        firestore.collection("participantes")
+                            .document(uid)
+                            .update("fotoPerfilUrl", fotoPerfil)
+                    }
+
+                    // Navega a la pantalla principal
                     navController.navigate(AppScreens.PantallaPrincipal.route) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -613,7 +676,8 @@ fun handleOAuthLoginSuccess(
                         provider = provider,
                         uid = uid,
                         email = emailUser,
-                        displayName = displayName
+                        displayName = displayName,
+                        fotoUrl = fotoUrlProveedor ?: ""
                     )
                 )
             }

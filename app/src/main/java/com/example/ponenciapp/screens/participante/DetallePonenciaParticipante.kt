@@ -1,9 +1,6 @@
 package com.example.ponenciapp.screens.participante
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -56,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
@@ -67,6 +61,7 @@ import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.EscanerQR
+import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -137,8 +132,8 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                                 fecha = eventoDoc.getString("fecha") ?: "",
                                 lugar = eventoDoc.getString("lugar") ?: "",
                                 descripcion = eventoDoc.getString("descripcion") ?: "",
-                                contrasena = eventoDoc.getString("contrasena") ?: "",
-                                codigoEvento = eventoDoc.getString("codigoEvento") ?: ""
+                                codigoEvento = eventoDoc.getString("codigoEvento") ?: "",
+                                idOrganizador = eventoDoc.getString("idOrganizador") ?: ""
                             )
                         }
                 }
@@ -202,90 +197,9 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                     }
                 }, actions = {
                     // Icono de usuario
-                    participante?.let { usuario ->
-                        var showCardDialog by remember { mutableStateOf(false) }
-                        val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
-                                .clickable { showCardDialog = true }) {
-                            Text(
-                                modifier = Modifier.align(Alignment.Center),
-                                text = inicial,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
-                            )
-                        }
-
-                        if (showCardDialog) {
-                            Dialog(onDismissRequest = { showCardDialog = false }) {
-                                Card(
-                                    shape = MaterialTheme.shapes.large,
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    ),
-                                    elevation = CardDefaults.cardElevation(8.dp),
-                                    modifier = Modifier.padding(10.dp)
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .padding(16.dp)
-                                                .widthIn(min = 200.dp, max = 300.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(60.dp)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.tertiary,
-                                                        CircleShape
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        MaterialTheme.colorScheme.secondary,
-                                                        CircleShape
-                                                    )
-                                            ) {
-                                                Text(
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                    text = inicial,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = Color.White
-                                                )
-                                            }
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Text(
-                                                    "${usuario.nombre} ${usuario.apellidos}",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    "Email: ${usuario.emailEduca}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Text(
-                                                    "Centro: ${usuario.centro}",
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                            }
-                                        }
-                                        Button(
-                                            modifier = Modifier.padding(bottom = 16.dp),
-                                            onClick = { showCardDialog = false }) {
-                                            Text("Cerrar")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    participante?.let { IconoUsuario(
+                        usuario = it
+                    ) }
                 })
         }) { padding ->
 

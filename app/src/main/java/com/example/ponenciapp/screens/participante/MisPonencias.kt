@@ -101,8 +101,8 @@ fun MisPonencias(navController: NavController) {
                 fecha = doc.getString("fecha") ?: "",
                 lugar = doc.getString("lugar") ?: "",
                 descripcion = doc.getString("descripcion") ?: "",
-                contrasena = doc.getString("contrasena") ?: "",
-                codigoEvento = doc.getString("codigoEvento") ?: ""
+                codigoEvento = doc.getString("codigoEvento") ?: "",
+                idOrganizador = doc.getString("idOrganizador") ?: ""
             )
             scope.launch { eventoDao.insertar(evento!!) }
         }
@@ -175,7 +175,9 @@ fun MisPonencias(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(participante = it) }
+                    participante?.let { IconoUsuario(
+                        usuario = it
+                    ) }
                 }
             )
         },

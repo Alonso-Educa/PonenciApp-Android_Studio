@@ -10,6 +10,6 @@ data class EventoData(
     val fecha: String,
     val lugar: String,
     val descripcion: String,
-    val contrasena: String,
-    val codigoEvento: String
+    val codigoEvento: String,
+    val idOrganizador: String
 )

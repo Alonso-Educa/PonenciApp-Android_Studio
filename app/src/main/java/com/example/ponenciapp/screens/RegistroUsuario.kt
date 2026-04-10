@@ -35,10 +35,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun RegistroUsuario(
     navController: NavController,
-    provider: String,       // "email", "google" o "microsoft"
+    proveedor: String,       // "email", "google" o "microsoft"
     uid: String,            // UID ya creado en Firebase Auth (vacío si es email)
     emailExterno: String,   // Email del proveedor externo (vacío si es email)
-    displayName: String     // DisplayName del proveedor externo (vacío si es email)
+    displayName: String,     // DisplayName del proveedor externo (vacío si es email)
+    fotoUrlExterno: String // URL de la foto del proveedor externo (vacío si es email)
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -53,7 +54,7 @@ fun RegistroUsuario(
     }
     val participanteDao = db.participanteDao()
 
-    val esProveedorExterno = provider == "google" || provider == "microsoft"
+    val esProveedorExterno = proveedor == "google" || proveedor == "microsoft"
 
     // Campos: si viene de proveedor externo, email y nombre vienen pre-rellenados
     var nombre by remember { mutableStateOf(if (esProveedorExterno) displayName else "") }
@@ -62,13 +63,14 @@ fun RegistroUsuario(
     var centro by remember { mutableStateOf("") }
     var codigoCentro by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var fotoUrl by remember { mutableStateOf(if (esProveedorExterno) fotoUrlExterno else "") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
     // Etiqueta del proveedor para mostrar en UI
-    val providerLabel = when (provider) {
+    val proveedorEtiqueta = when (proveedor) {
         "google" -> "Google"
         "microsoft" -> "Microsoft (Educacyl)"
         else -> null
@@ -79,8 +81,8 @@ fun RegistroUsuario(
             TopAppBar(
                 title = { Text("Registro de usuario") },
                 navigationIcon = {
-                    // Solo permite volver si es registro de email;
-                    // si viene de OAuth ya tiene cuenta creada en Auth
+                    // Solo permite volver si es registro de email, no de OAuth
+                    // Si viene de OAuth ya tiene cuenta creada en Auth y necesita completarla
                     if (!esProveedorExterno) {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -105,7 +107,7 @@ fun RegistroUsuario(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Cabecera informativa
-            if (providerLabel != null) {
+            if (proveedorEtiqueta != null) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -123,7 +125,7 @@ fun RegistroUsuario(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            "Cuenta $providerLabel verificada. Completa los datos para continuar.",
+                            "Cuenta $proveedorEtiqueta verificada. Completa los datos para continuar.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -230,8 +232,8 @@ fun RegistroUsuario(
 
             Button(
                 onClick = {
-                    // Validaciones comunes
                     when {
+                        // Validaciones comunes
                         nombre.isBlank() -> Toast.makeText(context, "Introduce el nombre", Toast.LENGTH_SHORT).show()
                         apellidos.isBlank() -> Toast.makeText(context, "Introduce los apellidos", Toast.LENGTH_SHORT).show()
                         emailEduca.isBlank() -> Toast.makeText(context, "Introduce el email", Toast.LENGTH_SHORT).show()
@@ -250,7 +252,7 @@ fun RegistroUsuario(
                         else -> {
                             isLoading = true
                             if (esProveedorExterno) {
-                                // El usuario YA existe en Firebase Auth, solo guardar en Firestore y Room
+                                // El usuario ya existe en Firebase Auth, solo guardar en Firestore y Room
                                 guardarDatosNuevoUsuario(
                                     uid = uid,
                                     nombre = nombre,
@@ -275,7 +277,8 @@ fun RegistroUsuario(
                                         // Si falla, eliminar la cuenta de Auth para no dejar estado inconsistente
                                         auth.currentUser?.delete()
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                    }
+                                    },
+                                    fotoUrl = fotoUrl
                                 )
                             } else {
                                 // Registro con email: crear cuenta en Firebase Auth primero
@@ -305,7 +308,8 @@ fun RegistroUsuario(
                                                 isLoading = false
                                                 auth.currentUser?.delete()
                                                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                            }
+                                            },
+                                            fotoUrl = fotoUrl
                                         )
                                     }
                                     .addOnFailureListener { e ->
@@ -343,7 +347,8 @@ private fun guardarDatosNuevoUsuario(
     participanteDao: com.example.ponenciapp.data.bbdd.dao.ParticipanteDao,
     scope: kotlinx.coroutines.CoroutineScope,
     onSuccess: () -> Unit,
-    onError: (String) -> Unit
+    onError: (String) -> Unit,
+    fotoUrl: String
 ) {
     val data = mapOf(
         "nombre" to nombre,
@@ -353,7 +358,8 @@ private fun guardarDatosNuevoUsuario(
         "codigoCentro" to codigoCentro,
         "rol" to "participante",
         "fechaRegistro" to formatearFechaHora(),
-        "idEvento" to ""
+        "idEvento" to "",
+        "fotoPerfilUrl" to fotoUrl
     )
     firestore.collection("participantes").document(uid)
         .set(data)
@@ -369,7 +375,8 @@ private fun guardarDatosNuevoUsuario(
                         codigoCentro = codigoCentro,
                         rol = "participante",
                         fechaRegistro = formatearFechaHora(),
-                        idEvento = ""
+                        idEvento = "",
+                        fotoPerfilUrl = fotoUrl
                     )
                 )
                 onSuccess()

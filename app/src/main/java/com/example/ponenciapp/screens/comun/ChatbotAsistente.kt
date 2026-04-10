@@ -104,6 +104,7 @@ import com.google.firebase.auth.auth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.ImeAction
+import coil.compose.AsyncImage
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -140,7 +141,6 @@ fun ChatbotAsistente(navController: NavController) {
     val viewModel: ChatViewModel = viewModel(
         LocalContext.current as androidx.activity.ComponentActivity
     )
-
 
     LaunchedEffect(Unit) {
         // Carga el participante desde Room
@@ -203,7 +203,9 @@ fun ChatbotAsistente(navController: NavController) {
                 }
                 // Icono circular con la inicial del usuario
                 // Al pulsar muestra un dialog con los datos del participante
-                participante?.let { IconoUsuario(participante = it) }
+                participante?.let { IconoUsuario(
+                    usuario = it
+                ) }
             }
         )
     }) { innerPadding ->
@@ -223,7 +225,7 @@ fun ChatbotAsistente(navController: NavController) {
         ) {
             // PantallaChat recibe el viewModel, estado de lista y snackbarHostState
             PantallaChat(
-                viewModel = viewModel, listState = listState
+                viewModel = viewModel, listState = listState, participante = participante!!
             )
         }
     }
@@ -242,7 +244,7 @@ fun ChatbotAsistente(navController: NavController) {
 // Clase para la pantalla del chat
 @Composable
 fun PantallaChat(
-    viewModel: ChatViewModel, listState: LazyListState
+    viewModel: ChatViewModel, listState: LazyListState, participante: ParticipanteData
 ) {
     var texto by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -293,7 +295,9 @@ fun PantallaChat(
                                         duration = SnackbarDuration.Short
                                     )
                                 }
-                            })
+                            },
+                            participante = participante
+                        )
 
                         // Recoge la ultima posicion del ultimo mensaje
                         val esUltimo = index == viewModel.mensajes.lastIndex
@@ -473,7 +477,7 @@ fun PantallaChat(
 // Clase para los mensajes del chat
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit) {
+fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: ParticipanteData) {
 
     // Boolean que comprueba si el autor del mensaje es el usuario o no
     val isUser = mensaje.rol == "user"
@@ -560,19 +564,34 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit) {
                 )
             }
         }
-        // Pendiente meter la foto del usuario TODO()
+        // Pone la foto de usuario o una por defecto si no tiene
         if (isUser) {
-            Image(
-                modifier = Modifier
-                    .padding(top = 10.dp)
-                    .size(40.dp)
-                    .align(Alignment.Top)
-                    .clip(CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                painter = painterResource(R.drawable.user),
-                contentDescription = "Imagen del usuario",
-                contentScale = ContentScale.Crop
-            )
+            if (!participante.fotoPerfilUrl.isNullOrEmpty()) {
+                AsyncImage(
+                    model = participante.fotoPerfilUrl,
+                    contentDescription = "Imagen del usuario",
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        .size(40.dp)
+                        .align(Alignment.Top)
+                        .clip(CircleShape)
+                        ,
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .size(40.dp)
+                        .align(Alignment.Top)
+                        .clip(CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    painter = painterResource(R.drawable.user),
+                    contentDescription = "Imagen del usuario",
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
     Row(

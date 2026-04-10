@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cloudinary.android.MediaManager
 import com.example.ponenciapp.navigation.AppNavigation
 import com.example.ponenciapp.screens.utilidad.ThemeViewModel
 import com.example.ponenciapp.screens.utilidad.ThemeViewModelFactory
@@ -30,7 +31,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Pedir permiso solo en Android 13 o superior
+
+        // Inicializar Cloudinary
+        val cloudName = BuildConfig.CLOUDINARY_CLOUD_NAME
+        val config = mapOf(
+            "cloud_name" to cloudName,
+            "secure" to true
+        )
+        MediaManager.init(this, config)
+
+        // Pedir permiso para notificaciones
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -41,8 +51,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Obtener el destino de la notificación
         val destinoNotificacion = intent?.getStringExtra("destino")
 
+        // Establecer el contenido de la actividad
         setContent {
             val context = LocalContext.current
             val themeViewModel: ThemeViewModel = viewModel(
@@ -54,6 +66,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Manejar el intent cuando se lanza la actividad
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val destino = intent.getStringExtra("destino")

@@ -1,9 +1,17 @@
 package com.example.ponenciapp.screens.comun
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import androidx.credentials.exceptions.GetCredentialException
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +30,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Help
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -31,6 +41,7 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.ArrowOutward
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +52,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -57,8 +69,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -66,12 +82,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
 import androidx.navigation.NavController
 import androidx.room.Room
+import coil.compose.AsyncImage
 import com.composables.icons.lucide.File
 import com.composables.icons.lucide.FileSpreadsheet
 import com.composables.icons.lucide.Lucide
+import com.example.ponenciapp.R
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
@@ -81,10 +101,19 @@ import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.example.ponenciapp.screens.utilidad.ThemeViewModel
 import com.example.ponenciapp.screens.utilidad.exportarAsistenciasExcel
 import com.example.ponenciapp.screens.utilidad.exportarAsistenciasPdf
+import com.example.ponenciapp.screens.utilidad.subirImagenCloudinary
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.Firebase
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,6 +125,12 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
     val scope = rememberCoroutineScope()
     val uid = Firebase.auth.currentUser?.uid ?: ""
+
+    val activity = context as Activity
+    val webClientId = stringResource(R.string.default_web_client_id)
+
+    @Suppress("NewApi")
+    val credentialManager = remember { CredentialManager.create(context) }
 
     // Base de datos de room
     val db = remember {
@@ -109,10 +144,10 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
     var participante by remember { mutableStateOf<ParticipanteData?>(null) }
     var participanteEditando by remember { mutableStateOf<ParticipanteData?>(null) }
-    var listaParticipantes by remember { mutableStateOf<List<ParticipanteData>>(emptyList()) }
 
     var showDialogEditar by remember { mutableStateOf(false) }
     var showDialogCambiarEmail by remember { mutableStateOf(false) }
+    var showDialogBorrarCuenta by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -132,6 +167,33 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
         else -> {
             { BottomBarParticipante(navController, AppScreens.Ajustes.route) }
+        }
+    }
+
+    // Para subir imágenes desde la galería
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { selectedUri ->
+
+            // Subimos la imagen a Cloudinary
+            subirImagenCloudinary(context, selectedUri, uid) { imageUrl ->
+
+                // Actualización de Firestore primero
+                Firebase.firestore.collection("participantes")
+                    .document(uid)
+                    .update("fotoPerfilUrl", imageUrl)
+                    .addOnSuccessListener {
+                        // Actualización de Room dentro de coroutine
+                        scope.launch {
+                            participante?.let { p ->
+                                val actualizado = p.copy(fotoPerfilUrl = imageUrl)
+                                participanteDao.actualizar(actualizado) // suspend, ok dentro de coroutine
+                                participante = actualizado
+                            }
+                        }
+                    }
+            }
         }
     }
 
@@ -155,7 +217,11 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(participante = it) }
+                    participante?.let {
+                        IconoUsuario(
+                            usuario = it
+                        )
+                    }
                 }
             )
         },
@@ -223,22 +289,39 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Círculo con la inicial del participante
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .background(
-                                                MaterialTheme.colorScheme.primary,
-                                                CircleShape
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = it.nombre.firstOrNull()?.uppercase() ?: "P",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold
+                                    // Imagen de perfil si la hay
+                                    if (!it.fotoPerfilUrl.isNullOrEmpty()) {
+                                        AsyncImage(
+                                            model = it.fotoPerfilUrl,
+                                            contentDescription = "Foto de perfil",
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(CircleShape),
+                                            contentScale = ContentScale.Crop
                                         )
+                                    } else {
+                                        // Inicial si no hay foto
+                                        val inicial = it.nombre.firstOrNull()?.uppercase() ?: "U"
+                                        Box(
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .background(
+                                                    MaterialTheme.colorScheme.tertiary,
+                                                    CircleShape
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.secondary,
+                                                    CircleShape
+                                                )
+                                        ) {
+                                            Text(
+                                                modifier = Modifier.align(Alignment.Center),
+                                                text = inicial,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = Color.White
+                                            )
+                                        }
                                     }
 
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -305,76 +388,305 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                                     )
                                 }
 
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                // Valida que el usuario tenga login con email y contraseña
+                                val puedeGestionarCredenciales = Firebase.auth.currentUser
+                                    ?.providerData
+                                    ?.any { it.providerId == "password" } == true
 
-                                // Opciones de cuenta
-                                Text(
-                                    "Restablecer mis datos privados",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
+                                // Si lo tiene, muestra el menú de gestión de credenciales
+                                if (puedeGestionarCredenciales) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    // Cambiar email
-                                    // Peniente que se sincronice con room bien y no haya conflictos de datos al iniciar sesión TODO()
-                                    TextButton(
-                                        onClick = { showDialogCambiarEmail = true },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(0.dp)
+                                    // Opciones de cuenta
+                                    Text(
+                                        "Restablecer mis datos privados",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Icon(
-                                            Icons.Default.Email,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            "Cambiar email",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                        // Cambiar email
+                                        // Pendiente que se sincronice con room bien y no haya conflictos de datos al iniciar sesión TODO()
+                                        TextButton(
+                                            onClick = { showDialogCambiarEmail = true },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Email,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "Cambiar correo",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+
+                                        // Restablecer contraseña
+                                        TextButton(
+                                            onClick = {
+                                                Firebase.auth.sendPasswordResetEmail(
+                                                    participante?.emailEduca ?: ""
+                                                )
+                                                    .addOnSuccessListener {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Email de restablecimiento enviado",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                    .addOnFailureListener { e ->
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Error: ${e.message}",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Lock,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                "Restablecer contraseña",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                // Estados
+                val currentUser = Firebase.auth.currentUser
+                val proveedoresVinculados =
+                    currentUser?.providerData?.map { it.providerId } ?: emptyList()
+                val tieneEmailPassword = "password" in proveedoresVinculados
+                val tieneGoogle = "google.com" in proveedoresVinculados
+                val tieneMicrosoft = "microsoft.com" in proveedoresVinculados
+
+                // Solo mostramos esta sección si tiene email/password (puede vincular OAuth)
+                // o si tiene OAuth y puede vincular más
+                val hayAlgoQueVincular = !tieneGoogle || !tieneMicrosoft
+
+                if (tieneEmailPassword && hayAlgoQueVincular) {
+
+                    var mostrarDialogo by remember { mutableStateOf(false) }
+                    var proveedorSeleccionado by remember { mutableStateOf("") }
+                    var estaCargando by remember { mutableStateOf(false) }
+
+                    if (mostrarDialogo) {
+                        DialogoVincularProveedor(
+                            proveedorNombre = proveedorSeleccionado,
+                            onConfirmar = { password ->
+                                mostrarDialogo = false
+                                estaCargando = true
+                                val emailActual =
+                                    currentUser?.email ?: return@DialogoVincularProveedor
+
+                                when (proveedorSeleccionado) {
+                                    "Google" -> {
+                                        val googleIdOption = GetGoogleIdOption.Builder()
+                                            .setServerClientId(webClientId)
+                                            .setFilterByAuthorizedAccounts(false)
+                                            .build()
+                                        val request = GetCredentialRequest.Builder()
+                                            .addCredentialOption(googleIdOption)
+                                            .build()
+
+                                        scope.launch {
+                                            try {
+                                                val result = credentialManager.getCredential(
+                                                    context,
+                                                    request
+                                                )
+                                                val credential = result.credential
+                                                if (credential is CustomCredential &&
+                                                    credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                                                ) {
+                                                    val idToken =
+                                                        GoogleIdTokenCredential.createFrom(
+                                                            credential.data
+                                                        ).idToken
+                                                    val googleCredential =
+                                                        GoogleAuthProvider.getCredential(
+                                                            idToken,
+                                                            null
+                                                        )
+                                                    reautenticarYVincular(
+                                                        auth = Firebase.auth,
+                                                        email = emailActual,
+                                                        password = password,
+                                                        credentialToLink = googleCredential,
+                                                        context = context,
+                                                        onExito = { estaCargando = false },
+                                                        onError = { msg ->
+                                                            estaCargando = false
+                                                            Toast.makeText(
+                                                                context,
+                                                                msg,
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    )
+                                                }
+                                            } catch (e: GetCredentialException) {
+                                                estaCargando = false
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error: ${e.localizedMessage}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
                                     }
 
-                                    // Restablecer contraseña
-                                    TextButton(
-                                        onClick = {
-                                            Firebase.auth.sendPasswordResetEmail(
-                                                participante?.emailEduca ?: ""
+                                    "Microsoft" -> {
+                                        val provider = OAuthProvider.newBuilder("microsoft.com")
+                                            .addCustomParameter("tenant", "common")
+                                            .setScopes(
+                                                listOf(
+                                                    "email",
+                                                    "profile",
+                                                    "openid",
+                                                    "User.Read"
+                                                )
                                             )
-                                                .addOnSuccessListener {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Email de restablecimiento enviado",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                                .addOnFailureListener { e ->
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Error: ${e.message}",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
+                                            .build()
+
+                                        Firebase.auth.currentUser
+                                            ?.reauthenticate(
+                                                EmailAuthProvider.getCredential(
+                                                    emailActual,
+                                                    password
+                                                )
+                                            )
+                                            ?.addOnSuccessListener {
+                                                Firebase.auth.currentUser
+                                                    ?.startActivityForLinkWithProvider(
+                                                        activity,
+                                                        provider
+                                                    )
+                                                    ?.addOnSuccessListener {
+                                                        estaCargando = false
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Cuenta de Microsoft vinculada",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                    ?.addOnFailureListener { e ->
+                                                        estaCargando = false
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Error: ${e.message}",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                            }
+                                            ?.addOnFailureListener {
+                                                estaCargando = false
+                                                Toast.makeText(
+                                                    context,
+                                                    "Contraseña incorrecta",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                    }
+                                }
+                            },
+                            onDismiss = { mostrarDialogo = false }
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HorizontalDivider()
+
+                        Text(
+                            "Métodos de acceso vinculados",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Vincula proveedores adicionales para acceder con ellos también",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (!tieneGoogle) {
+                                OutlinedButton(
+                                    onClick = {
+                                        proveedorSeleccionado = "Google"
+                                        mostrarDialogo = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !estaCargando
+                                ) {
+                                    if (estaCargando && proveedorSeleccionado == "Google") {
+                                        CircularProgressIndicator(Modifier.size(16.dp))
+                                    } else {
                                         Icon(
-                                            Icons.Default.Lock,
+                                            painter = painterResource(R.drawable.google_logo),
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint = Color.Unspecified
                                         )
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         Text(
-                                            "Restablecer contraseña",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
+                                            "Vincular Google",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (!tieneMicrosoft) {
+                                OutlinedButton(
+                                    onClick = {
+                                        proveedorSeleccionado = "Microsoft"
+                                        mostrarDialogo = true
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !estaCargando
+                                ) {
+                                    if (estaCargando && proveedorSeleccionado == "Microsoft") {
+                                        CircularProgressIndicator(Modifier.size(16.dp))
+                                    } else {
+                                        Icon(
+                                            painter = painterResource(R.drawable.microsoft_logo),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = Color.Unspecified
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "Vincular Microsoft",
+                                            style = MaterialTheme.typography.bodySmall
                                         )
                                     }
                                 }
@@ -510,6 +822,33 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
                     HorizontalDivider()
 
+                    Text(
+                        "Gestión de cuenta",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Puedes eliminar permanentemente tu cuenta y todos tus datos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Borrar cuenta
+                    OutlinedButton(
+                        onClick = { showDialogBorrarCuenta = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Borrar cuenta")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Borrar cuenta")
+                    }
+
+                    HorizontalDivider()
+
                     // Cerrar sesión
                     TextButton(
                         onClick = {
@@ -541,14 +880,12 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     participanteEditando = null
                 },
                 // Guardar el participante editado en la base de datos
-
-
                 onGuardado = { participanteActualizado ->
                     participante = participanteActualizado  // ← actualiza la UI
                     showDialogEditar = false
                     participanteEditando = null
-
-                }
+                },
+                launcher = launcher
             )
         }
 
@@ -571,20 +908,21 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Cambiar email",
+                            "Cambiar correo electrónico",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Introduce tu nuevo email. Te enviaremos un enlace de confirmación.",
+                            "Introduce tu nuevo correo. Te enviaremos un enlace de confirmación. Por favor inicie sesión de nuevo tras hacer el cambio con éxito.",
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
                         OutlinedTextField(
                             value = nuevoEmail,
                             onValueChange = { nuevoEmail = it },
-                            label = { Text("Nuevo email") },
+                            label = { Text("Nuevo correo") },
                             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -682,6 +1020,180 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                 }
             }
         }
+
+        if (showDialogBorrarCuenta) {
+
+            var password by remember { mutableStateOf("") }
+            var isLoading by remember { mutableStateOf(false) }
+
+            val user = Firebase.auth.currentUser
+            val proveedores = user?.providerData?.map { it.providerId } ?: emptyList()
+            val tienePassword = "password" in proveedores
+            val tieneGoogle = "google.com" in proveedores
+            val tieneMicrosoft = "microsoft.com" in proveedores
+
+            fun borrarCuentaTrasReautenticacion() {
+                val uid = user?.uid ?: return
+                isLoading = true
+
+                Firebase.firestore.collection("participantes")
+                    .document(uid)
+                    .delete()
+                    .addOnSuccessListener {
+                        user.delete()
+                            .addOnSuccessListener {
+                                scope.launch { participanteDao.eliminar(uid) }
+                                isLoading = false
+                                showDialogBorrarCuenta = false
+                                Toast.makeText(context, "Cuenta borrada correctamente", Toast.LENGTH_SHORT).show()
+                                navController.navigate(AppScreens.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                isLoading = false
+                                Toast.makeText(context, "Error borrando auth: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        isLoading = false
+                        Toast.makeText(context, "Error borrando datos: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+
+            fun reautenticarYBorrar() {
+                val uid = user?.uid ?: return
+
+                when {
+                    tienePassword -> {
+                        val email = user.email ?: return
+                        val credential = EmailAuthProvider.getCredential(email, password)
+                        user.reauthenticate(credential)
+                            .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
+                            .addOnFailureListener {
+                                isLoading = false
+                                Toast.makeText(context, "Contraseña incorrecta", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+
+                    tieneGoogle -> {
+                        val googleIdOption = GetGoogleIdOption.Builder()
+                            .setServerClientId(webClientId)
+                            .setFilterByAuthorizedAccounts(true)
+                            .build()
+                        val request = GetCredentialRequest.Builder()
+                            .addCredentialOption(googleIdOption)
+                            .build()
+
+                        scope.launch {
+                            try {
+                                val result = credentialManager.getCredential(context, request)
+                                val credential = result.credential
+                                if (credential is CustomCredential &&
+                                    credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                                ) {
+                                    val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                                    val googleCredential = GoogleAuthProvider.getCredential(idToken, null)
+                                    user.reauthenticate(googleCredential)
+                                        .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
+                                        .addOnFailureListener { e ->
+                                            isLoading = false
+                                            Toast.makeText(context, "Error al verificar Google: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                }
+                            } catch (e: GetCredentialException) {
+                                isLoading = false
+                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+
+                    tieneMicrosoft -> {
+                        val provider = OAuthProvider.newBuilder("microsoft.com")
+                            .addCustomParameter("tenant", "common")
+                            .setScopes(listOf("email", "profile", "openid", "User.Read"))
+                            .build()
+
+                        user.startActivityForReauthenticateWithProvider(activity, provider)
+                            .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
+                            .addOnFailureListener { e ->
+                                isLoading = false
+                                Toast.makeText(context, "Error al verificar Microsoft: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                }
+            }
+
+            Dialog(onDismissRequest = { if (!isLoading) showDialogBorrarCuenta = false }) {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Borrar mi cuenta",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            when {
+                                tienePassword -> "Para continuar, confirma tu contraseña. Esta acción es irreversible."
+                                tieneGoogle -> "Se te pedirá que confirmes tu cuenta de Google. Esta acción es irreversible."
+                                tieneMicrosoft -> "Se te pedirá que confirmes tu cuenta de Microsoft. Esta acción es irreversible."
+                                else -> "Esta acción es irreversible."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Campo de contraseña solo si tiene email/password
+                        if (tienePassword) {
+                            OutlinedTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = { Text("Contraseña") },
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                onClick = { showDialogBorrarCuenta = false },
+                                enabled = !isLoading
+                            ) {
+                                Text("Cancelar")
+                            }
+
+                            Button(
+                                enabled = (!tienePassword || password.isNotBlank()) && !isLoading,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                ),
+                                onClick = { reautenticarYBorrar() }
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MaterialTheme.colorScheme.onError
+                                    )
+                                } else {
+                                    Text("Aceptar")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -689,7 +1201,8 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 fun DialogEditarUsuario(
     participanteEditando: ParticipanteData?,
     onDismiss: () -> Unit,
-    onGuardado: (ParticipanteData) -> Unit
+    onGuardado: (ParticipanteData) -> Unit,
+    launcher: ManagedActivityResultLauncher<String, Uri?>
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -753,6 +1266,26 @@ fun DialogEditarUsuario(
                     label = { Text("Código del centro") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                TextButton(
+                    onClick = { launcher.launch("image/*") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Cambiar foto de usuario",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                     Button(
@@ -841,4 +1374,81 @@ fun DialogEditarUsuario(
             }
         }
     }
+}
+
+// Función para vincular un proveedor a la cuenta existente
+@Composable
+fun DialogoVincularProveedor(
+    proveedorNombre: String,
+    onConfirmar: (password: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Vincular con $proveedorNombre") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Por seguridad, confirma tu contraseña actual antes de vincular una nueva cuenta.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Contraseña") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None
+                    else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                if (passwordVisible) Icons.Default.VisibilityOff
+                                else Icons.Default.Visibility,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmar(password) },
+                enabled = password.isNotBlank()
+            ) { Text("Confirmar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+fun reautenticarYVincular(
+    auth: FirebaseAuth,
+    email: String,
+    password: String,
+    credentialToLink: AuthCredential,
+    context: Context,
+    onExito: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val emailCredential = EmailAuthProvider.getCredential(email, password)
+    auth.currentUser?.reauthenticate(emailCredential)
+        ?.addOnSuccessListener {
+            auth.currentUser?.linkWithCredential(credentialToLink)
+                ?.addOnSuccessListener {
+                    Toast.makeText(context, "Cuenta vinculada correctamente", Toast.LENGTH_SHORT)
+                        .show()
+                    onExito()
+                }
+                ?.addOnFailureListener { e ->
+                    onError(e.message ?: "Error al vincular")
+                }
+        }
+        ?.addOnFailureListener {
+            onError("Contraseña incorrecta")
+        }
 }

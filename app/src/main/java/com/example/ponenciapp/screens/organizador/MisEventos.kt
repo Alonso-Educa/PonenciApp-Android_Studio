@@ -97,7 +97,7 @@ fun MisEventos(navController: NavController) {
     val eventoDao = db.eventoDao()
     val participanteDao = db.participanteDao()
 
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var organizador by remember { mutableStateOf<ParticipanteData?>(null) }
 
     var listaEventos by remember { mutableStateOf<List<EventoData>>(emptyList()) }
     var showDialogCrear by remember { mutableStateOf(false) }
@@ -107,8 +107,8 @@ fun MisEventos(navController: NavController) {
 
     // Cargar eventos del organizador
     LaunchedEffect(Unit) {
-        // Carga el participante desde Room
-        participante = participanteDao.getParticipantePorId(uid)
+        // Carga el organizador desde Room
+        organizador = participanteDao.getParticipantePorId(uid)
 
         // Carga los eventos del organizador
         firestore.collection("eventos").whereEqualTo("idOrganizador", uid).get()
@@ -121,8 +121,8 @@ fun MisEventos(navController: NavController) {
                             fecha = doc.getString("fecha") ?: "",
                             lugar = doc.getString("lugar") ?: "",
                             descripcion = doc.getString("descripcion") ?: "",
-                            contrasena = doc.getString("contrasena") ?: "",
-                            codigoEvento = doc.getString("codigoEvento") ?: ""
+                            codigoEvento = doc.getString("codigoEvento") ?: "",
+                            idOrganizador = doc.getString("idOrganizador") ?: "",
                         )
                     } catch (e: Exception) {
                         null
@@ -168,7 +168,9 @@ fun MisEventos(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(participante = it) }
+                    organizador?.let { IconoUsuario(
+                        usuario = it
+                    ) }
                 }
             )
         },
@@ -536,7 +538,6 @@ fun DialogCrearEvento(
                                             "lugar" to lugar,
                                             "descripcion" to descripcion,
                                             "codigoEvento" to codigo,
-                                            "contrasena" to "",
                                             "idOrganizador" to idOrganizador
                                         )
                                         // Guarda el evento en Firestore
@@ -548,8 +549,8 @@ fun DialogCrearEvento(
                                                     fecha = fecha,
                                                     lugar = lugar,
                                                     descripcion = descripcion,
-                                                    contrasena = "",
-                                                    codigoEvento = codigo
+                                                    codigoEvento = codigo,
+                                                    idOrganizador = idOrganizador
                                                 )
                                                 scope.launch {
                                                     eventoDao.insertar(eventoNuevo)
@@ -627,7 +628,7 @@ fun DialogCrearEvento(
 // Para generar un código con patrón tipo "FORM-X7K2"
 fun generarCodigoEvento(): String {
     // Tiene las letras y números y genera un string de 4 caracteres aleatorios
-    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     val codigoAleatorio = (1..4).map { chars.random() }.joinToString("")
     return "FORM-$codigoAleatorio"
 }

@@ -30,10 +30,22 @@ android {
 
     buildTypes {
         debug {
+            // Api key de groq
             buildConfigField("String", "GROQ_API_KEY", "\"${localProperties["GROQ_API_KEY"]}\"")
+
+            // Api keys de Cloudinary
+            buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties["CLOUDINARY_CLOUD_NAME"]}\"")
+            buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties["CLOUDINARY_API_KEY"]}\"")
+            buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties["CLOUDINARY_API_SECRET"]}\"")
         }
         release {
+            // Api key de groq
             buildConfigField("String", "GROQ_API_KEY", "\"${localProperties["GROQ_API_KEY"]}\"")
+
+            // Api keys de Cloudinary
+            buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties["CLOUDINARY_CLOUD_NAME"]}\"")
+            buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties["CLOUDINARY_API_KEY"]}\"")
+            buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties["CLOUDINARY_API_SECRET"]}\"")
 
             isMinifyEnabled = false
             proguardFiles(
@@ -65,7 +77,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.navigation:navigation-compose:2.9.5")
-    //implementation(libs.androidx.material3)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.compose.animation)
 
     // Iconos / Imágenes
     implementation("androidx.compose.material:material-icons-extended")
@@ -105,11 +118,13 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
+    // CLOUDINARY (Para subir imágenes)
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
+
     // ---------------- ROOM ----------------
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    implementation(libs.androidx.compose.animation)
-    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui)
     ksp("androidx.room:room-compiler:2.6.1")
 
     // ---------------- FIREBASE  ----------------
