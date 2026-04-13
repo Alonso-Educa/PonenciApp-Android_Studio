@@ -343,7 +343,7 @@ fun TarjetaPonencia(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    ponencia.ponente,
+                    ponencia.ponente.ifEmpty { "Sin ponente" },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -128,9 +128,11 @@ fun UnirseEvento(navController: NavController) {
             // Campo de texto — el texto se convierte automáticamente a mayúsculas
             OutlinedTextField(
                 value = codigoEvento,
-                onValueChange = { codigoEvento = it.uppercase() },
+                onValueChange = {
+                    codigoEvento = it.filterNot { char -> char.isWhitespace() }
+                },
                 label = { Text("Código del evento") },
-                placeholder = { Text("Ej: FORM-X7K2-2026") },
+                placeholder = { Text("Ej: FORM-X7K2") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

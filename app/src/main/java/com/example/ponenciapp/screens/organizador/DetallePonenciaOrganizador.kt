@@ -146,7 +146,7 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
             TopAppBar(
                 title = {
                     Text(
-                        text = ponencia?.titulo ?: "Detalle de ponencia",
+                        text = ponencia?.titulo ?: "Información de la ponencia",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
@@ -167,9 +167,11 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                     }
                 }, actions = {
                     // Icono de usuario
-                    participante?.let { IconoUsuario(
-                        usuario = it
-                    ) }
+                    participante?.let {
+                        IconoUsuario(
+                            usuario = it
+                        )
+                    }
                 })
         }) { padding ->
 
@@ -230,7 +232,7 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        p.ponente,
+                        p.ponente.ifBlank { " - " },
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -243,7 +245,9 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -268,7 +272,6 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -276,15 +279,20 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
                                 Icon(
                                     Icons.Default.CalendarMonth,
                                     contentDescription = "Fecha",
-                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     evento?.fecha ?: "", style = MaterialTheme.typography.bodyMedium
                                 )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Icon(
                                     Icons.Default.LocationOn,
-                                    contentDescription = "Fecha",
-                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                    contentDescription = "Lugar",
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     evento?.lugar ?: "", style = MaterialTheme.typography.bodyMedium

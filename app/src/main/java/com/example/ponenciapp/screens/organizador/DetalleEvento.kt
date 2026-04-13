@@ -181,7 +181,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
             TopAppBar(
                 title = {
                 Text(
-                    text = evento?.nombre ?: "Detalle del evento",
+                    text = evento?.nombre ?: "Información del evento",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
@@ -426,7 +426,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     Text(
-                                        ponencia.ponente,
+                                        ponencia.ponente.ifEmpty { "Sin ponente" },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -595,7 +595,7 @@ fun DialogCrearPonencia(
                 OutlinedTextField(
                     value = ponente,
                     onValueChange = { ponente = it },
-                    label = { Text("Ponente") },
+                    label = { Text("Ponente (Opcional)") },
                     maxLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -633,9 +633,9 @@ fun DialogCrearPonencia(
                                     context, "Introduce el título", Toast.LENGTH_SHORT
                                 ).show()
 
-                                ponente.isBlank() -> Toast.makeText(
-                                    context, "Introduce el ponente", Toast.LENGTH_SHORT
-                                ).show()
+//                                ponente.isBlank() -> Toast.makeText(
+//                                    context, "Introduce el ponente", Toast.LENGTH_SHORT
+//                                ).show()
 
                                 horaInicio.isBlank() -> Toast.makeText(
                                     context, "Selecciona la hora de inicio", Toast.LENGTH_SHORT

@@ -194,6 +194,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         }
                     }
             }
+            showDialogEditar = false
         }
     }
 
@@ -850,6 +851,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     HorizontalDivider()
 
                     // Cerrar sesión
+                    // Hacer un dialog para confirmar cerrar sesion TODO()
                     TextButton(
                         onClick = {
                             Firebase.auth.signOut()
@@ -1045,19 +1047,31 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                                 scope.launch { participanteDao.eliminar(uid) }
                                 isLoading = false
                                 showDialogBorrarCuenta = false
-                                Toast.makeText(context, "Cuenta borrada correctamente", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Cuenta borrada correctamente",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 navController.navigate(AppScreens.Login.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
                             }
                             .addOnFailureListener { e ->
                                 isLoading = false
-                                Toast.makeText(context, "Error borrando auth: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Error borrando auth: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                     }
                     .addOnFailureListener { e ->
                         isLoading = false
-                        Toast.makeText(context, "Error borrando datos: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Error borrando datos: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
             }
 
@@ -1072,7 +1086,8 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                             .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
                             .addOnFailureListener {
                                 isLoading = false
-                                Toast.makeText(context, "Contraseña incorrecta", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Contraseña incorrecta", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                     }
 
@@ -1092,18 +1107,28 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                                 if (credential is CustomCredential &&
                                     credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
                                 ) {
-                                    val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
-                                    val googleCredential = GoogleAuthProvider.getCredential(idToken, null)
+                                    val idToken =
+                                        GoogleIdTokenCredential.createFrom(credential.data).idToken
+                                    val googleCredential =
+                                        GoogleAuthProvider.getCredential(idToken, null)
                                     user.reauthenticate(googleCredential)
                                         .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
                                         .addOnFailureListener { e ->
                                             isLoading = false
-                                            Toast.makeText(context, "Error al verificar Google: ${e.message}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Error al verificar Google: ${e.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                 }
                             } catch (e: GetCredentialException) {
                                 isLoading = false
-                                Toast.makeText(context, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Error: ${e.localizedMessage}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     }
@@ -1118,7 +1143,11 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                             .addOnSuccessListener { borrarCuentaTrasReautenticacion() }
                             .addOnFailureListener { e ->
                                 isLoading = false
-                                Toast.makeText(context, "Error al verificar Microsoft: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Error al verificar Microsoft: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                     }
                 }

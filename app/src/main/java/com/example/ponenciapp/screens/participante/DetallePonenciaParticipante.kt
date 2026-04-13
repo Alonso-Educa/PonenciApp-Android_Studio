@@ -260,7 +260,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        p.ponente,
+                        p.ponente.ifBlank { " - " },
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -272,7 +272,10 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ), modifier = Modifier.fillMaxWidth()
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -297,7 +300,6 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -305,15 +307,20 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                                 Icon(
                                     Icons.Default.CalendarMonth,
                                     contentDescription = "Fecha",
-                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     evento?.fecha ?: "", style = MaterialTheme.typography.bodyMedium
                                 )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
                                 Icon(
                                     Icons.Default.LocationOn,
-                                    contentDescription = "Fecha",
-                                    modifier = Modifier.size(16.dp)  // ← mismo tamaño que el texto bodyMedium
+                                    contentDescription = "Lugar",
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     evento?.lugar ?: "", style = MaterialTheme.typography.bodyMedium
@@ -357,7 +364,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                 } else {
                     Button(
                         onClick = { escaneando = true },
-                        modifier = Modifier.fillMaxWidth().padding(padding).height(50.dp)
+                        modifier = Modifier.fillMaxWidth().height(50.dp).padding(top = 6.dp)
                     ) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))

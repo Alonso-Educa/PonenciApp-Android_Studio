@@ -628,7 +628,7 @@ fun DialogCrearEvento(
 // Para generar un código con patrón tipo "FORM-X7K2"
 fun generarCodigoEvento(): String {
     // Tiene las letras y números y genera un string de 4 caracteres aleatorios
-    val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     val codigoAleatorio = (1..4).map { chars.random() }.joinToString("")
     return "FORM-$codigoAleatorio"
 }

@@ -74,7 +74,7 @@ fun IconoUsuario(usuario: ParticipanteData) {
                                 model = usuario.fotoPerfilUrl,
                                 contentDescription = "Foto de perfil",
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .size(72.dp)
                                     .clip(CircleShape)
                                     .clickable { showCardDialog = true },
                                 contentScale = ContentScale.Crop
@@ -83,7 +83,7 @@ fun IconoUsuario(usuario: ParticipanteData) {
                             // Inicial si no hay foto
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
+                                    .size(72.dp)
                                     .background(MaterialTheme.colorScheme.tertiary, CircleShape)
                                     .border(1.dp, MaterialTheme.colorScheme.secondary, CircleShape)
                                     .clickable { showCardDialog = true }
@@ -102,8 +102,9 @@ fun IconoUsuario(usuario: ParticipanteData) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Email: ${usuario.emailEduca}", style = MaterialTheme.typography.bodyMedium)
                             Text("Centro: ${usuario.centro} - ${usuario.codigoCentro}", style = MaterialTheme.typography.bodyMedium)
-                            Text("Rol: ${usuario.rol}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Rol: ${usuario.rol.replaceFirstChar { c -> c.uppercase() }}", style = MaterialTheme.typography.bodyMedium)
                         }
+                        //it.rol.replaceFirstChar { c -> c.uppercase() }
                     }
                     Button(modifier = Modifier.padding(bottom = 16.dp), onClick = { showCardDialog = false }) {
                         Text("Cerrar")

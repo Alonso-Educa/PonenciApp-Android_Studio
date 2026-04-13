@@ -503,7 +503,7 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: Partic
                     .padding(top = 10.dp)
                     .size(40.dp)
                     .clip(CircleShape)
-                    .border(2.dp, Color.Black, CircleShape),
+                    .border(1.dp, Color.Black, CircleShape),
                 painter = painterResource(R.drawable.bot),
                 contentDescription = "Imagen del bot",
                 contentScale = ContentScale.Crop
@@ -572,7 +572,7 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: Partic
                     contentDescription = "Imagen del usuario",
                     modifier = Modifier
                         .padding(top = 10.dp)
-                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                         .size(40.dp)
                         .align(Alignment.Top)
                         .clip(CircleShape)
