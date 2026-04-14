@@ -22,7 +22,8 @@ import androidx.navigation.NavController
 import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.dao.UsuarioDao
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.participante.formatearFechaHora
@@ -33,7 +34,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegistroUsuario(
+fun RegistroParticipante(
     navController: NavController,
     proveedor: String,       // "email", "google" o "microsoft"
     uid: String,            // UID ya creado en Firebase Auth (vacío si es email)
@@ -52,7 +53,7 @@ fun RegistroUsuario(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     val esProveedorExterno = proveedor == "google" || proveedor == "microsoft"
 
@@ -261,7 +262,7 @@ fun RegistroUsuario(
                                     centro = centro,
                                     codigoCentro = codigoCentro,
                                     firestore = firestore,
-                                    participanteDao = participanteDao,
+                                    usuarioDao = usuarioDao,
                                     scope = scope,
                                     onSuccess = {
                                         isLoading = false
@@ -293,7 +294,7 @@ fun RegistroUsuario(
                                             centro = centro,
                                             codigoCentro = codigoCentro,
                                             firestore = firestore,
-                                            participanteDao = participanteDao,
+                                            usuarioDao = usuarioDao,
                                             scope = scope,
                                             onSuccess = {
                                                 isLoading = false
@@ -344,7 +345,7 @@ private fun guardarDatosNuevoUsuario(
     centro: String,
     codigoCentro: String,
     firestore: FirebaseFirestore,
-    participanteDao: com.example.ponenciapp.data.bbdd.dao.ParticipanteDao,
+    usuarioDao: UsuarioDao,
     scope: kotlinx.coroutines.CoroutineScope,
     onSuccess: () -> Unit,
     onError: (String) -> Unit,
@@ -361,13 +362,13 @@ private fun guardarDatosNuevoUsuario(
         "idEvento" to "",
         "fotoPerfilUrl" to fotoUrl
     )
-    firestore.collection("participantes").document(uid)
+    firestore.collection("usuarios").document(uid)
         .set(data)
         .addOnSuccessListener {
             scope.launch {
-                participanteDao.insertar(
-                    ParticipanteData(
-                        idParticipante = uid,
+                usuarioDao.insertar(
+                    UsuarioData(
+                        idUsuario = uid,
                         nombre = nombre,
                         apellidos = apellidos,
                         emailEduca = emailEduca,

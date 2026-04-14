@@ -66,7 +66,7 @@ import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.comun.BottomBarOrganizador
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
@@ -95,9 +95,9 @@ fun MisEventos(navController: NavController) {
     }
 
     val eventoDao = db.eventoDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
-    var organizador by remember { mutableStateOf<ParticipanteData?>(null) }
+    var organizador by remember { mutableStateOf<UsuarioData?>(null) }
 
     var listaEventos by remember { mutableStateOf<List<EventoData>>(emptyList()) }
     var showDialogCrear by remember { mutableStateOf(false) }
@@ -108,7 +108,7 @@ fun MisEventos(navController: NavController) {
     // Cargar eventos del organizador
     LaunchedEffect(Unit) {
         // Carga el organizador desde Room
-        organizador = participanteDao.getParticipantePorId(uid)
+        organizador = usuarioDao.getParticipantePorId(uid)
 
         // Carga los eventos del organizador
         firestore.collection("eventos").whereEqualTo("idOrganizador", uid).get()

@@ -48,8 +48,8 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.data.bbdd.entities.ValoracionData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
@@ -83,10 +83,10 @@ fun Valoracion(navController: NavController) {
     val valoracionDao = db.valoracionDao()
     val ponenciaDao = db.ponenciaDao()
     val eventoDao = db.eventoDao()
-    val participanteDao = db.participanteDao()
+    val participanteDao = db.usuarioDao()
 
     // Variables básicas
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var idEvento by remember { mutableStateOf("") }
     var idParticipante by remember { mutableStateOf("") }
 
@@ -107,7 +107,7 @@ fun Valoracion(navController: NavController) {
         // Cargar participante desde Room para obtener idEvento e idParticipante
         participante = participanteDao.getParticipantePorId(uid)
         idEvento = participante?.idEvento ?: ""
-        idParticipante = participante?.idParticipante ?: ""
+        idParticipante = participante?.idUsuario ?: ""
 
         // Cargar evento desde Firestore
         firestore.collection("eventos").document(idEvento).get()

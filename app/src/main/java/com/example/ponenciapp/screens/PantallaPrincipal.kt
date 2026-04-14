@@ -30,21 +30,21 @@ fun PantallaPrincipal(navController: NavController) {
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        val participante = participanteDao.getParticipantePorId(uid)
+        val usuario = usuarioDao.getParticipantePorId(uid)
         when {
             // Organizador → Mis Eventos
-            participante?.rol == "organizador" -> {
+            usuario?.rol == "organizador" -> {
                 navController.navigate(AppScreens.MisEventos.route) {
                     popUpTo(0) { inclusive = true }
                 }
             }
-            // Sin evento → Unirse a evento
-            participante?.idEvento.isNullOrEmpty() -> {
+            // Participante sin evento → Unirse a evento
+            usuario?.idEvento.isNullOrEmpty() -> {
                 navController.navigate(AppScreens.UnirseEvento.route) {
                     popUpTo(0) { inclusive = true }
                 }

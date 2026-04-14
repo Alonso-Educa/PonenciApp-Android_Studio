@@ -25,5 +25,4 @@ interface PonenciaDao {
 
     @Query("DELETE FROM ponencia WHERE idPonencia = :id")
     suspend fun eliminarPonencia(id: String)
-
 }

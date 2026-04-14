@@ -96,7 +96,6 @@ import androidx.room.Room
 import com.example.ponenciapp.R
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.chatbot.ChatViewModel
 import com.example.ponenciapp.chatbot.Mensaje
 import com.google.firebase.Firebase
@@ -105,6 +104,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.ImeAction
 import coil.compose.AsyncImage
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -128,10 +128,10 @@ fun ChatbotAsistente(navController: NavController) {
 
     // Daos de room
     val mensajeDao = db.mensajeDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     // Datos del participante
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
 
     // Variables de control
     var isLoading by remember { mutableStateOf(true) }
@@ -143,11 +143,10 @@ fun ChatbotAsistente(navController: NavController) {
     )
 
     LaunchedEffect(Unit) {
-        // Carga el participante desde Room
-        participante = participanteDao.getParticipantePorId(uid)
-        isLoading = false
-        // Se sabe que el usuario está en la ventana
+        participante = usuarioDao.getParticipantePorId(uid)
+        viewModel.recargarMensajes()
         viewModel.usuarioEnChat = true
+        isLoading = false
     }
 
     // Al salir de la pantalla
@@ -244,7 +243,7 @@ fun ChatbotAsistente(navController: NavController) {
 // Clase para la pantalla del chat
 @Composable
 fun PantallaChat(
-    viewModel: ChatViewModel, listState: LazyListState, participante: ParticipanteData
+    viewModel: ChatViewModel, listState: LazyListState, participante: UsuarioData
 ) {
     var texto by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -477,7 +476,7 @@ fun PantallaChat(
 // Clase para los mensajes del chat
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: ParticipanteData) {
+fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: UsuarioData) {
 
     // Boolean que comprueba si el autor del mensaje es el usuario o no
     val isUser = mensaje.rol == "user"
@@ -514,10 +513,9 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: Partic
             IconButton(
                 onClick = { onCopy(mensaje.contenido) },
                 modifier = Modifier
+                    .size(22.dp)
                     .padding(bottom = 5.dp)
-                    .size(20.dp)
                     .align(Alignment.Bottom)
-                    .clip(RectangleShape)
             ) {
                 Icon(
                     Icons.Default.ContentCopy,
@@ -552,10 +550,9 @@ fun MensajeChat(mensaje: Mensaje, onCopy: (String) -> Unit, participante: Partic
             IconButton(
                 onClick = { onCopy(mensaje.contenido) },
                 modifier = Modifier
+                    .size(22.dp)
                     .padding(bottom = 5.dp)
-                    .size(20.dp)
                     .align(Alignment.Bottom)
-                    .clip(RectangleShape)
             ) {
                 Icon(
                     Icons.Default.ContentCopy,

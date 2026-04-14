@@ -94,7 +94,7 @@ import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.R
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.participante.formatearFechaHora
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
@@ -140,10 +140,10 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     }
 
     // Dao
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
-    var participanteEditando by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
+    var participanteEditando by remember { mutableStateOf<UsuarioData?>(null) }
 
     var showDialogEditar by remember { mutableStateOf(false) }
     var showDialogCambiarEmail by remember { mutableStateOf(false) }
@@ -151,7 +151,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
         isLoading = false
     }
 
@@ -180,7 +180,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
             subirImagenCloudinary(context, selectedUri, uid) { imageUrl ->
 
                 // Actualización de Firestore primero
-                Firebase.firestore.collection("participantes")
+                Firebase.firestore.collection("usuarios")
                     .document(uid)
                     .update("fotoPerfilUrl", imageUrl)
                     .addOnSuccessListener {
@@ -188,7 +188,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         scope.launch {
                             participante?.let { p ->
                                 val actualizado = p.copy(fotoPerfilUrl = imageUrl)
-                                participanteDao.actualizar(actualizado) // suspend, ok dentro de coroutine
+                                usuarioDao.actualizar(actualizado) // suspend, ok dentro de coroutine
                                 participante = actualizado
                             }
                         }
@@ -254,15 +254,13 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-            }
 
-            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    HorizontalDivider()
-
                     Text(
                         "Datos del usuario",
                         style = MaterialTheme.typography.titleMedium,
@@ -702,57 +700,61 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    HorizontalDivider()
+                    // Hacer que el organizador pueda descargar informes de sus eventos
+                    // o de asistencias de participantes a estos TODO()
+                    if(participante?.rol == "participante") {
+                        HorizontalDivider()
 
-                    Text(
-                        "Informes",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Puedes descargar los informes de tus asistencias aquí",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Botón de exportar a excel
-                        TextButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    exportarAsistenciasExcel(
-                                        context, participante?.idEvento ?: ""
-                                    )
-                                }
-                            },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = Color(0xFF2E7D32)
-                            )
+                        Text(
+                            "Informes",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Puedes descargar los informes de tus asistencias aquí",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Lucide.FileSpreadsheet, contentDescription = "Excel")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Exportar a Excel")
-                        }
+                            // Botón de exportar a excel
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    scope.launch {
+                                        exportarAsistenciasExcel(
+                                            context, participante?.idEvento ?: ""
+                                        )
+                                    }
+                                },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = Color(0xFF2E7D32)
+                                )
+                            ) {
+                                Icon(Lucide.FileSpreadsheet, contentDescription = "Excel")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Exportar a Excel")
+                            }
 
-                        // Botón de exportar a pdf
-                        TextButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                scope.launch {
-                                    exportarAsistenciasPdf(
-                                        context, participante?.idEvento ?: ""
-                                    )
-                                }
-                            },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = Color(0xFFB71C1C)
-                            )
-                        ) {
-                            Icon(Lucide.File, contentDescription = "PDF")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Exportar a PDF")
+                            // Botón de exportar a pdf
+                            TextButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    scope.launch {
+                                        exportarAsistenciasPdf(
+                                            context, participante?.idEvento ?: ""
+                                        )
+                                    }
+                                },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = Color(0xFFB71C1C)
+                                )
+                            ) {
+                                Icon(Lucide.File, contentDescription = "PDF")
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Exportar a PDF")
+                            }
                         }
                     }
 
@@ -1038,13 +1040,13 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                 val uid = user?.uid ?: return
                 isLoading = true
 
-                Firebase.firestore.collection("participantes")
+                Firebase.firestore.collection("usuarios")
                     .document(uid)
                     .delete()
                     .addOnSuccessListener {
                         user.delete()
                             .addOnSuccessListener {
-                                scope.launch { participanteDao.eliminar(uid) }
+                                scope.launch { usuarioDao.eliminar(uid) }
                                 isLoading = false
                                 showDialogBorrarCuenta = false
                                 Toast.makeText(
@@ -1228,9 +1230,9 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
 @Composable
 fun DialogEditarUsuario(
-    participanteEditando: ParticipanteData?,
+    participanteEditando: UsuarioData?,
     onDismiss: () -> Unit,
-    onGuardado: (ParticipanteData) -> Unit,
+    onGuardado: (UsuarioData) -> Unit,
     launcher: ManagedActivityResultLauncher<String, Uri?>
 ) {
     val context = LocalContext.current
@@ -1242,7 +1244,7 @@ fun DialogEditarUsuario(
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     var nombre by remember { mutableStateOf(participanteEditando?.nombre ?: "") }
     var apellidos by remember { mutableStateOf(participanteEditando?.apellidos ?: "") }
@@ -1345,7 +1347,7 @@ fun DialogEditarUsuario(
                                 else -> {
                                     isLoading = true
                                     val idParticipante =
-                                        participanteEditando?.idParticipante ?: ""
+                                        participanteEditando?.idUsuario ?: ""
                                     val data = mapOf(
                                         "nombre" to nombre,
                                         "apellidos" to apellidos,
@@ -1356,11 +1358,11 @@ fun DialogEditarUsuario(
                                         "fechaRegistro" to participanteEditando?.fechaRegistro,
                                         "idEvento" to participanteEditando?.idEvento
                                     )
-                                    firestore.collection("participantes").document(idParticipante)
+                                    firestore.collection("usuarios").document(idParticipante)
                                         .set(data)
                                         .addOnSuccessListener {
-                                            val participanteNuevo = ParticipanteData(
-                                                idParticipante = idParticipante,
+                                            val participanteNuevo = UsuarioData(
+                                                idUsuario = idParticipante,
                                                 nombre = nombre,
                                                 apellidos = apellidos,
                                                 emailEduca = participanteEditando?.emailEduca ?: "",
@@ -1372,7 +1374,7 @@ fun DialogEditarUsuario(
                                                 idEvento = participanteEditando?.idEvento ?: ""
                                             )
                                             scope.launch {
-                                                participanteDao.insertar(participanteNuevo)
+                                                usuarioDao.insertar(participanteNuevo)
                                                 isLoading = false
                                                 Toast.makeText(
                                                     context,

@@ -116,7 +116,7 @@ fun AppNavigation(destinoNotificacion: String? = null, themeViewModel: ThemeView
             DetallePonenciaOrganizador(navController, idPonencia)
         }
         composable(
-            route = AppScreens.RegistroUsuario.route,
+            route = AppScreens.RegistroParticipante.route,
             arguments = listOf(
                 navArgument("provider") { type = NavType.StringType },
                 navArgument("uid") { type = NavType.StringType },
@@ -124,7 +124,7 @@ fun AppNavigation(destinoNotificacion: String? = null, themeViewModel: ThemeView
                 navArgument("displayName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            RegistroUsuario(
+            RegistroParticipante(
                 navController = navController,
                 proveedor = backStackEntry.arguments?.getString("provider") ?: "email",
                 uid = backStackEntry.arguments?.getString("uid") ?: "",

@@ -8,7 +8,7 @@ import com.example.ponenciapp.data.bbdd.entities.*
 
 @Database(
     entities = [
-        ParticipanteData::class,
+        UsuarioData::class,
         EventoData::class,
         PonenciaData::class,
         AsistenciaData::class,
@@ -20,7 +20,7 @@ import com.example.ponenciapp.data.bbdd.entities.*
 )
 
 abstract class AppDB : RoomDatabase() {
-    abstract fun participanteDao(): ParticipanteDao
+    abstract fun usuarioDao(): UsuarioDao
     abstract fun eventoDao(): EventoDao
     abstract fun ponenciaDao(): PonenciaDao
     abstract fun asistenciaDao(): AsistenciaDao

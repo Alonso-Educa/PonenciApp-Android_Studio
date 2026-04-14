@@ -25,7 +25,7 @@ sealed class AppScreens(val route: String) {
 
     object ChatbotAsistente : AppScreens("ChatbotAsistente")
 
-    object RegistroUsuario : AppScreens(
+    object RegistroParticipante : AppScreens(
         "registro/{provider}/{uid}/{email}/{displayName}/{fotoUrl}"
     ) {
         fun createRoute(provider: String, uid: String, email: String, displayName: String, fotoUrl: String) =
@@ -51,6 +51,7 @@ sealed class AppScreens(val route: String) {
                 "DetallePonenciaParticipante" -> DetallePonenciaParticipante
                 "DetallePonenciaOrganizador" -> DetallePonenciaOrganizador
                 "ChatbotAsistente" -> ChatbotAsistente
+                "RegistroParticipante" -> RegistroParticipante
                 else -> null
             }
         }

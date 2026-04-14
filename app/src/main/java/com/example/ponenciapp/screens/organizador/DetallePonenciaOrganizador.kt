@@ -1,4 +1,4 @@
-package com.example.ponenciapp.screens.participante
+package com.example.ponenciapp.screens.organizador
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -54,8 +54,8 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.screens.organizador.DialogMostrarQR
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
@@ -83,18 +83,18 @@ fun DetallePonenciaOrganizador(navController: NavController, idPonencia: String)
 
     // daos de room
     val ponenciaDao = db.ponenciaDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     // variables de estado
     var ponencia by remember { mutableStateOf<PonenciaData?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var evento by remember { mutableStateOf<EventoData?>(null) }
     var showQREvento by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         // carga el participante desde room
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
 
         // carga la ponencia desde firebase
         firestore.collection("ponencias").document(idPonencia).get()

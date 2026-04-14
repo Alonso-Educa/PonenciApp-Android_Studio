@@ -28,7 +28,6 @@ import androidx.room.Room
 import com.example.ponenciapp.R
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.utilidad.ThemeViewModel
 import com.google.firebase.Firebase
@@ -41,12 +40,13 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
-import com.example.ponenciapp.data.bbdd.dao.ParticipanteDao
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import kotlinx.coroutines.CoroutineScope
 import android.content.Context
+import com.example.ponenciapp.data.bbdd.dao.UsuarioDao
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.screens.utilidad.getFotoMicrosoft
 import com.example.ponenciapp.screens.utilidad.saveBytesToTempUri
 import com.example.ponenciapp.screens.utilidad.subirImagenCloudinary
@@ -66,7 +66,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
             context.applicationContext, AppDB::class.java, Estructura.DB.NAME
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     var email by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
@@ -210,7 +210,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                             .addOnSuccessListener { result ->
                                 val uid = result.user?.uid ?: ""
                                 val emailActualAuth = result.user?.email ?: ""
-                                firestore.collection("participantes").document(uid).get()
+                                firestore.collection("usuarios").document(uid).get()
                                     .addOnSuccessListener { doc ->
                                         if (!doc.exists()) {
                                             estaCargandoEmail = false
@@ -223,14 +223,14 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                         }
                                         val emailEnFirestore = doc.getString("emailEduca") ?: ""
                                         if (emailActualAuth != emailEnFirestore) {
-                                            firestore.collection("participantes").document(uid)
+                                            firestore.collection("usuarios").document(uid)
                                                 .update("emailEduca", emailActualAuth)
                                         }
                                         scope.launch {
                                             val fotoPerfil = doc.getString("fotoPerfilUrl") ?: ""
-                                            participanteDao.insertar(
-                                                ParticipanteData(
-                                                    idParticipante = uid,
+                                            usuarioDao.insertar(
+                                                UsuarioData(
+                                                    idUsuario = uid,
                                                     nombre = doc.getString("nombre") ?: "",
                                                     apellidos = doc.getString("apellidos") ?: "",
                                                     emailEduca = doc.getString("emailEduca") ?: "",
@@ -340,7 +340,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                             displayName = displayName,
                                             provider = "google",
                                             firestore = firestore,
-                                            participanteDao = participanteDao,
+                                            usuarioDao = usuarioDao,
                                             scope = scope,
                                             navController = navController,
                                             context = context,
@@ -434,7 +434,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                                         displayName = displayName,
                                                         provider = "microsoft",
                                                         firestore = firestore,
-                                                        participanteDao = participanteDao,
+                                                        usuarioDao = usuarioDao,
                                                         scope = scope,
                                                         navController = navController,
                                                         context = context,
@@ -462,7 +462,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                                     displayName = displayName,
                                     provider = "microsoft",
                                     firestore = firestore,
-                                    participanteDao = participanteDao,
+                                    usuarioDao = usuarioDao,
                                     scope = scope,
                                     navController = navController,
                                     context = context,
@@ -521,7 +521,7 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
         OutlinedButton(
             onClick = {
                 navController.navigate(
-                    AppScreens.RegistroUsuario.createRoute("email", "", "", "", "")
+                    AppScreens.RegistroParticipante.createRoute("email", "", "", "", "")
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -623,14 +623,14 @@ fun handleOAuthLoginSuccess(
     displayName: String,
     provider: String,
     firestore: FirebaseFirestore,
-    participanteDao: ParticipanteDao,
+    usuarioDao: UsuarioDao,
     scope: CoroutineScope,
     navController: NavController,
     context: Context,
     onCargando: (Boolean) -> Unit,
     fotoUrlProveedor: String? =  null
 ) {
-    firestore.collection("participantes").document(uid).get()
+    firestore.collection("usuarios").document(uid).get()
         .addOnSuccessListener { doc ->
             onCargando(false)
             if (doc.exists()) {
@@ -643,9 +643,9 @@ fun handleOAuthLoginSuccess(
                         ?: "" // Sino, vacío
 
                     // Inserta el participante en la base de datos
-                    participanteDao.insertar(
-                        ParticipanteData(
-                            idParticipante = uid,
+                    usuarioDao.insertar(
+                        UsuarioData(
+                            idUsuario = uid,
                             nombre = doc.getString("nombre") ?: "",
                             apellidos = doc.getString("apellidos") ?: "",
                             emailEduca = doc.getString("emailEduca") ?: "",
@@ -660,7 +660,7 @@ fun handleOAuthLoginSuccess(
 
                     // Guarda en Firestore si no había foto
                     if (doc.getString("fotoPerfilUrl").isNullOrEmpty() && fotoPerfil.isNotEmpty()) {
-                        firestore.collection("participantes")
+                        firestore.collection("usuarios")
                             .document(uid)
                             .update("fotoPerfilUrl", fotoPerfil)
                     }
@@ -672,7 +672,7 @@ fun handleOAuthLoginSuccess(
                 }
             } else {
                 navController.navigate(
-                    AppScreens.RegistroUsuario.createRoute(
+                    AppScreens.RegistroParticipante.createRoute(
                         provider = provider,
                         uid = uid,
                         email = emailUser,

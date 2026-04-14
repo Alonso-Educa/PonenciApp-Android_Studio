@@ -57,8 +57,8 @@ import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.EscanerQR
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
@@ -89,12 +89,12 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
 
     // daos de room
     val ponenciaDao = db.ponenciaDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
     val asistenciaDao = db.asistenciaDao()
 
     // variables de room
     var ponencia by remember { mutableStateOf<PonenciaData?>(null) }
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var evento by remember { mutableStateOf<EventoData?>(null) }
 
     // variables de control
@@ -104,7 +104,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
 
     LaunchedEffect(Unit) {
         // carga el participante desde room
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
 
         // Carga sus ponencias desde firebase
         firestore.collection("ponencias").document(idPonencia).get()
@@ -381,11 +381,11 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
             // Si el qr devuelve el código correcto se pasa a firebase y se crea la asistencia
             if (valor == "checkin:${participante?.idEvento}:$idPonencia") {
                 val idAsistencia =
-                    "${participante?.idParticipante}_${participante?.idEvento}_${idPonencia}_checkin"
+                    "${participante?.idUsuario}_${participante?.idEvento}_${idPonencia}_checkin"
                 firestore.collection("asistencias").document(idAsistencia).set(
                     mapOf(
                         "idAsistencia" to idAsistencia,
-                        "idParticipante" to participante?.idParticipante,
+                        "idParticipante" to participante?.idUsuario,
                         "idEvento" to participante?.idEvento,
                         "idPonencia" to idPonencia,
                         "tipo" to "ponencia",
@@ -396,7 +396,7 @@ fun DetallePonenciaParticipante(navController: NavController, idPonencia: String
                         asistenciaDao.insertar(
                             AsistenciaData(
                                 idAsistencia = idAsistencia,
-                                idParticipante = participante?.idParticipante ?: "",
+                                idParticipante = participante?.idUsuario ?: "",
                                 idEvento = participante?.idEvento ?: "",
                                 idPonencia = idPonencia,
                                 tipo = "ponencia",

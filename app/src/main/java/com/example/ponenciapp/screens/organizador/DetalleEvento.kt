@@ -74,9 +74,9 @@ import com.composables.icons.lucide.Lucide
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
-import com.example.ponenciapp.data.generarQRBitmap
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
+import com.example.ponenciapp.screens.utilidad.generarQRBitmap
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
@@ -107,10 +107,10 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
     // Dao
     val eventoDao = db.eventoDao()
     val ponenciaDao = db.ponenciaDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
     // Variables de estado
-    var organizador by remember { mutableStateOf<ParticipanteData?>(null) }
+    var organizador by remember { mutableStateOf<UsuarioData?>(null) }
     var evento by remember { mutableStateOf<EventoData?>(null) }
     var listaPonencias by remember { mutableStateOf<List<PonenciaData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -121,7 +121,7 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
 
     LaunchedEffect(Unit) {
         // Carga el usuario creador del evento
-        organizador = participanteDao.getParticipantePorId(uid)
+        organizador = usuarioDao.getParticipantePorId(uid)
         // Carga el evento desde firebase
         firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
                 evento = EventoData(
@@ -354,8 +354,8 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
             if (listaPonencias.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
+                        .fillMaxSize()
+                        .padding(bottom=32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

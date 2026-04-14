@@ -46,7 +46,7 @@ suspend fun cargarDatosAsistencias(idEvento: String): List<AsistenciaRow> {
         .whereEqualTo("idEvento", idEvento)
         .get().await()
 
-    val participantesSnapshot = firestore.collection("participantes").get().await()
+    val participantesSnapshot = firestore.collection("usuarios").get().await()
 
     val ponenciasSnapshot = firestore.collection("ponencias")
         .whereEqualTo("idEvento", idEvento)

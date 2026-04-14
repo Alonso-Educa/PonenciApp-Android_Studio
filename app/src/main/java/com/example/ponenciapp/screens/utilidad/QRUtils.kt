@@ -1,4 +1,4 @@
-package com.example.ponenciapp.data
+package com.example.ponenciapp.screens.utilidad
 
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -6,6 +6,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 
+// Función para generar un QR a partir de un contenido
 fun generarQRBitmap(contenido: String, tamano: Int = 512): Bitmap {
     val hints = mapOf(EncodeHintType.MARGIN to 1)
     val writer = QRCodeWriter()

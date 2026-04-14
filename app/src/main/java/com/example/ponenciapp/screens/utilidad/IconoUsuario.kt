@@ -16,11 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 
 // Función para mostrar el icono de usuario (participante/organizador)
 @Composable
-fun IconoUsuario(usuario: ParticipanteData) {
+fun IconoUsuario(usuario: UsuarioData) {
 
     var showCardDialog by remember { mutableStateOf(false) }
     val inicial = usuario.nombre.firstOrNull()?.uppercase() ?: "U"

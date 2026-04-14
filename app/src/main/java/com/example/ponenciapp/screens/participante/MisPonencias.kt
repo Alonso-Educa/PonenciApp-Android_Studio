@@ -53,8 +53,8 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
 import com.example.ponenciapp.data.bbdd.entities.PonenciaData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
@@ -79,11 +79,11 @@ fun MisPonencias(navController: NavController) {
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
 
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
     val ponenciaDao = db.ponenciaDao()
     val eventoDao = db.eventoDao()
 
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var listaPonencias by remember { mutableStateOf<List<PonenciaData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -91,7 +91,7 @@ fun MisPonencias(navController: NavController) {
 
     LaunchedEffect(Unit) {
         // Carga el participante desde Room
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
         val idEvento = participante?.idEvento ?: ""
         // Carga el evento
         firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->

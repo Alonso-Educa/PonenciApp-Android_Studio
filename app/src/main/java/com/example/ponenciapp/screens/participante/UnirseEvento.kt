@@ -20,7 +20,7 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.EventoData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.screens.utilidad.IconoUsuario
 import com.google.firebase.Firebase
@@ -45,10 +45,10 @@ fun UnirseEvento(navController: NavController) {
         ).allowMainThreadQueries().fallbackToDestructiveMigration().build()
     }
 
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
     val eventoDao = db.eventoDao()
 
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var codigoEvento by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -60,7 +60,7 @@ fun UnirseEvento(navController: NavController) {
 
     LaunchedEffect(Unit) {
         // Carga el participante desde Room
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
     }
 
     Scaffold(
@@ -183,13 +183,13 @@ fun UnirseEvento(navController: NavController) {
 
                                             // 2. Actualizar participante en Room
                                             val participanteActual =
-                                                participanteDao.getParticipantePorId(uid)
+                                                usuarioDao.getParticipantePorId(uid)
                                             participanteActual?.let {
-                                                participanteDao.actualizar(it.copy(idEvento = idEvento))
+                                                usuarioDao.actualizar(it.copy(idEvento = idEvento))
                                             }
 
                                             // 3. Actualizar participante en Firestore
-                                            firestore.collection("participantes").document(uid)
+                                            firestore.collection("usuarios").document(uid)
                                                 .update("idEvento", idEvento)
 
                                             // 4. Añadir uid al array de participantes del evento

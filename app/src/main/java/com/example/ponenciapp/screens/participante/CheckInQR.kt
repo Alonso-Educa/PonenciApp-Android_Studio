@@ -43,7 +43,7 @@ import androidx.room.Room
 import com.example.ponenciapp.data.Estructura
 import com.example.ponenciapp.data.bbdd.AppDB
 import com.example.ponenciapp.data.bbdd.entities.AsistenciaData
-import com.example.ponenciapp.data.bbdd.entities.ParticipanteData
+import com.example.ponenciapp.data.bbdd.entities.UsuarioData
 import com.example.ponenciapp.navigation.AppScreens
 import com.example.ponenciapp.notification.NotificationHandler
 import com.example.ponenciapp.screens.comun.BottomBarParticipante
@@ -75,9 +75,9 @@ fun CheckInQR(navController: NavController) {
     }
 
     val asistenciaDao = db.asistenciaDao()
-    val participanteDao = db.participanteDao()
+    val usuarioDao = db.usuarioDao()
 
-    var participante by remember { mutableStateOf<ParticipanteData?>(null) }
+    var participante by remember { mutableStateOf<UsuarioData?>(null) }
     var idEvento by remember { mutableStateOf("") }
     var idParticipante by remember { mutableStateOf("") }
 
@@ -87,9 +87,9 @@ fun CheckInQR(navController: NavController) {
 
     // Cargar participante y comprobar si ya hizo check-in
     LaunchedEffect(Unit) {
-        participante = participanteDao.getParticipantePorId(uid)
+        participante = usuarioDao.getParticipantePorId(uid)
         idEvento = participante?.idEvento ?: ""
-        idParticipante = participante?.idParticipante ?: ""
+        idParticipante = participante?.idUsuario ?: ""
 
         firestore.collection("asistencias")
             .whereEqualTo("idParticipante", idParticipante)
