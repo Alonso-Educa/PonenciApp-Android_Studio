@@ -27,6 +27,41 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
+    // ─── Companion object: constantes de configuración ───────────────────────
+    companion object {
+        private const val MAX_HISTORIAL = 20
+
+        private const val SYSTEM_PROMPT = """
+Eres el asistente virtual de PonenciApp, una aplicación para la gestión de eventos y ponencias educativas. Tu nombre es "Asistente PonenciApp".
+
+SOBRE LA APP:
+- PonenciApp tiene dos roles: Organizador y Participante.
+- Organizadores: crean eventos (nombre, fecha, lugar, descripción), añaden ponencias con horarios, generan códigos QR para check-in, registran participantes manualmente y consultan estadísticas. Pueden usar el panel web (Flutter) o la app móvil Android.
+- Participantes: se unen a eventos con un código (ej. FORM-X7K2), hacen check-in escaneando un QR, consultan ponencias, valoran eventos y ponencias con estrellas y comentarios. Solo usan la app móvil Android.
+
+FUNCIONALIDADES CLAVE:
+- Login: email/contraseña, Google o Microsoft (Educacyl). Se pueden vincular varios proveedores en Ajustes.
+- Eventos: cada evento tiene un código único autogenerado. El organizador comparte este código con los participantes.
+- Ponencias: se añaden dentro de un evento con título, ponente, descripción, hora inicio y fin.
+- Check-in QR: el organizador genera un QR para el evento. Los participantes lo escanean con la cámara para registrar asistencia.
+- Valoraciones: los participantes puntúan de 1 a 5 estrellas tanto el evento como cada ponencia, con comentario opcional.
+- Estadísticas: el organizador ve resúmenes (total eventos, ponencias, próximo evento, participantes). Puede exportar asistencias en PDF o Excel desde la app móvil.
+- Perfil: editar nombre, apellidos, email educativo, centro, código de centro, foto de perfil.
+- Seguridad: cambiar email o contraseña requiere re-autenticación. Se puede eliminar la cuenta completamente desde Ajustes.
+- Modo oscuro: disponible en Ajustes.
+- Base de datos local: la app usa Room para caché offline de datos del usuario, eventos y ponencias.
+
+INSTRUCCIONES DE COMPORTAMIENTO:
+- Responde siempre en español.
+- Sé conciso, amable y útil.
+- Si te preguntan algo que no tiene que ver con PonenciApp, puedes responder brevemente pero redirige la conversación hacia la app.
+- Si no sabes algo específico de la app, dilo honestamente y sugiere contactar con soporte.
+- Guía al usuario paso a paso cuando pregunte cómo hacer algo.
+- No inventes funcionalidades que no existen.
+"""
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     private val notificationHandler = NotificationHandler(application.applicationContext)
     var usuarioEnChat by mutableStateOf(false)
 
@@ -56,13 +91,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     var pensando by mutableStateOf(false)
         private set
 
+    var rolUsuario: String = "participante"
+        private set
+
     private var guardado by mutableStateOf(false)
     private var enviarTarea: Job? = null
     private var botMensajeIndex = -1
-
     private var cargandoMensajes = false
 
     init {
+        cargarRolUsuario()
         recargarMensajes()
     }
 
@@ -107,6 +145,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun cargarRolUsuario() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                val doc = withContext(Dispatchers.IO) {
+                    firestore.collection("usuarios").document(uid).get().await()
+                }
+                rolUsuario = doc.getString("rol") ?: "participante"
+            } catch (e: Exception) {
+                Log.e("FIRESTORE", "Error cargando rol: ${e.message}")
+            }
+        }
+    }
+
     fun enviarMensaje(text: String) {
         cancelarTareaEnCurso()
 
@@ -123,12 +175,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (!isActive) return@launch
 
+                // ── Contexto dinámico del usuario ────────────────────────────
+                // Se pueden enviar más cosas acerca del usuario para mejorar su experiencia TODO()
+                val contextoUsuario = "El usuario actual tiene el rol de $rolUsuario en la app."
+                val systemConContexto = SYSTEM_PROMPT.trimIndent() + "\n\n$contextoUsuario"
+
+                // ── Limitar historial a los últimos MAX_HISTORIAL mensajes ───
+                val historialLimitado = mensajes
+                    .takeLast(MAX_HISTORIAL)
+                    .map { MensajeApi(it.rol, it.contenido) }
+
                 val response = withContext(Dispatchers.IO) {
                     val resultado = api.chat(
                         "Bearer $apiKey",
                         ChatRequest(
                             modelo = "llama-3.1-8b-instant",
-                            mensajes = mensajes.map { MensajeApi(it.rol, it.contenido) }
+                            mensajes = listOf(MensajeApi("system", systemConContexto)) +
+                                    historialLimitado
                         )
                     )
                     if (!resultado.isSuccessful)
@@ -222,7 +285,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun insertarBienvenida() {
-        val contenido = "Hola! Soy Groq, tu asistente virtual. Escríbeme si necesitas algo, estaré encantado de ayudar."
+        // ── Mensaje de bienvenida actualizado ────────────────────────────────
+        val contenido = "¡Hola! Soy el asistente de PonenciApp. Puedo ayudarte con cualquier duda sobre la app: cómo crear eventos, unirte como participante, hacer check-in con QR, valorar ponencias y mucho más. ¿En qué puedo ayudarte?"
         val fecha = System.currentTimeMillis()
 
         try {
