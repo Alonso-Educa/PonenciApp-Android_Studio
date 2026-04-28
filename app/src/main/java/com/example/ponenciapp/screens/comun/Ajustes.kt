@@ -3,7 +3,6 @@ package com.example.ponenciapp.screens.comun
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.credentials.exceptions.GetCredentialException
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -11,7 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,6 +83,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.navigation.NavController
 import androidx.room.Room
 import coil.compose.AsyncImage
@@ -122,7 +121,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     // Para ir a la web
     // Se vinculará la página de ayuda de la parte de flutter cuando se realice
     val context = LocalContext.current
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ponenciapp.web.app/ayuda.html"))
     val scope = rememberCoroutineScope()
     val uid = Firebase.auth.currentUser?.uid ?: ""
 
@@ -148,6 +147,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     var showDialogEditar by remember { mutableStateOf(false) }
     var showDialogCambiarEmail by remember { mutableStateOf(false) }
     var showDialogBorrarCuenta by remember { mutableStateOf(false) }
+    var showDialogCerrarSesion by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -702,7 +702,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                 ) {
                     // Hacer que el organizador pueda descargar informes de sus eventos
                     // o de asistencias de participantes a estos TODO()
-                    if(participante?.rol == "participante") {
+                    if (participante?.rol == "participante") {
                         HorizontalDivider()
 
                         Text(
@@ -853,16 +853,11 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     HorizontalDivider()
 
                     // Cerrar sesión
-                    // Hacer un dialog para confirmar cerrar sesion TODO()
                     TextButton(
                         onClick = {
-                            Firebase.auth.signOut()
-                            navController.navigate(AppScreens.Login.route) {
-                                popUpTo(0) {
-                                    inclusive = true
-                                }
-                            }
-                        }, colors = ButtonDefaults.textButtonColors(
+                            showDialogCerrarSesion = true
+                        },
+                        colors = ButtonDefaults.textButtonColors(
                             contentColor = Color.Red
                         )
                     ) {
@@ -898,8 +893,9 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
             var nuevoEmail by remember { mutableStateOf("") }
             var passwordActual by remember { mutableStateOf("") }
             var passwordVisible by remember { mutableStateOf(false) }
-            val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-
+            val emailPattern = Regex(
+                "^[\\p{L}\\p{N}._%+\\-]+@[\\p{L}\\p{N}_\\-]+(\\.[\\p{L}\\p{N}_\\-]+)*\\.\\p{L}{2,}$"
+            )
             Dialog(onDismissRequest = { showDialogCambiarEmail = false }) {
                 Card(
                     shape = MaterialTheme.shapes.large,
@@ -925,7 +921,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
                         OutlinedTextField(
                             value = nuevoEmail,
-                            onValueChange = { nuevoEmail = it },
+                            onValueChange = { nuevoEmail = it.filterNot { char -> char.isWhitespace() } },
                             label = { Text("Nuevo correo") },
                             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                             singleLine = true,
@@ -933,7 +929,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         )
                         OutlinedTextField(
                             value = passwordActual,
-                            onValueChange = { passwordActual = it },
+                            onValueChange = { passwordActual = it.filterNot { char -> char.isWhitespace() } },
                             label = { Text("Contraseña") },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             trailingIcon = {
@@ -1188,7 +1184,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         if (tienePassword) {
                             OutlinedTextField(
                                 value = password,
-                                onValueChange = { password = it },
+                                onValueChange = { password = it.filterNot { char -> char.isWhitespace() } },
                                 label = { Text("Contraseña") },
                                 singleLine = true,
                                 visualTransformation = PasswordVisualTransformation(),
@@ -1224,6 +1220,46 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     }
                 }
             }
+        }
+
+        if (showDialogCerrarSesion) {
+
+            AlertDialog(
+                onDismissRequest = { showDialogCerrarSesion = false },
+                title = { Text("Cerrar sesión") },
+                text = { Text("¿Estás seguro de que quieres cerrar sesión?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            Firebase.auth.signOut()
+
+                            navController.navigate(AppScreens.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+
+                            showDialogCerrarSesion = false
+
+                            Toast.makeText(
+                                context,
+                                "Sesión cerrada correctamente",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Cerrar sesión")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDialogCerrarSesion = false }
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }
@@ -1428,8 +1464,9 @@ fun DialogoVincularProveedor(
                 )
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = { password = it.filterNot { char -> char.isWhitespace() } },
                     label = { Text("Contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None
                     else PasswordVisualTransformation(),
@@ -1441,12 +1478,13 @@ fun DialogoVincularProveedor(
                                 contentDescription = null
                             )
                         }
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onConfirmar(password) },
                 enabled = password.isNotBlank()
             ) { Text("Confirmar") }

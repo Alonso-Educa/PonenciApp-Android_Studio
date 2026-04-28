@@ -76,7 +76,9 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
     var estaCargandoMicrosoft by remember { mutableStateOf(false) }
     var showDialogRecuperar by remember { mutableStateOf(false) }
 
-    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    val emailPattern = Regex(
+        "^[\\p{L}\\p{N}._%+\\-]+@[\\p{L}\\p{N}_\\-]+(\\.[\\p{L}\\p{N}_\\-]+)*\\.[\\p{L}]{2,}$"
+    )
 
     // Google Sign-In
     val credentialManager = remember { CredentialManager.create(context) }
@@ -120,8 +122,10 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
         // Email
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
-            label = { Text("Email educativo") },
+            onValueChange = {
+                email = it.filterNot { char -> char.isWhitespace() }
+            },
+            label = { Text("Correo educativo") },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true,
@@ -133,7 +137,9 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
         // Contraseña
         OutlinedTextField(
             value = contrasena,
-            onValueChange = { contrasena = it },
+            onValueChange = {
+                contrasena = it.filterNot { char -> char.isWhitespace() }
+            },
             label = { Text("Contraseña") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
             trailingIcon = {
@@ -191,18 +197,18 @@ fun Login(navController: NavController, themeViewModel: ThemeViewModel) {
                         Toast.LENGTH_SHORT
                     ).show()
 
-                    // descomentar esto para validar contraseña correctamente TODO()
-//                    contrasena.length < 10 -> Toast.makeText(
-//                        context,
-//                        "La contraseña debe tener al menos 10 caracteres",
-//                        Toast.LENGTH_SHORT
-//                    ).show()
-//
-//                    !contrasena.any { !it.isLetterOrDigit() } -> Toast.makeText(
-//                        context,
-//                        "La contraseña debe contener al menos un carácter especial",
-//                        Toast.LENGTH_SHORT
-//                    ).show()
+                    // Validaciones de contraseña
+                    contrasena.length < 10 -> Toast.makeText(
+                        context,
+                        "La contraseña debe tener al menos 10 caracteres",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    !contrasena.any { !it.isLetterOrDigit() } -> Toast.makeText(
+                        context,
+                        "La contraseña debe contener al menos un carácter especial",
+                        Toast.LENGTH_SHORT
+                    ).show()
 
                     else -> {
                         estaCargandoEmail = true
@@ -541,7 +547,9 @@ fun DialogRecuperarContrasena(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val auth = Firebase.auth
     var emailRecuperar by remember { mutableStateOf("") }
-    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    val emailPattern = Regex(
+        "^[\\p{L}\\p{N}._%+\\-]+@[\\p{L}\\p{N}_\\-]+(\\.[\\p{L}\\p{N}_\\-]+)*\\.[\\p{L}]{2,}$"
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(

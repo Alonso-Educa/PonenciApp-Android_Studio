@@ -68,7 +68,9 @@ fun RegistroParticipante(
     var passwordVisible by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
-    val emailPattern = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+    val emailPattern = Regex(
+        "^[\\p{L}\\p{N}._%+\\-]+@[\\p{L}\\p{N}_\\-]+(\\.[\\p{L}\\p{N}_\\-]+)*\\.[\\p{L}]{2,}$"
+    )
 
     // Etiqueta del proveedor para mostrar en UI
     val proveedorEtiqueta = when (proveedor) {
@@ -146,13 +148,18 @@ fun RegistroParticipante(
             // Email: no editable si viene de proveedor externo
             OutlinedTextField(
                 value = emailEduca,
-                onValueChange = { if (!esProveedorExterno) emailEduca = it },
+                onValueChange = {
+                    if (!esProveedorExterno) emailEduca =
+                        it.filterNot { char -> char.isWhitespace() }
+                },
                 label = { Text("Email educativo") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 trailingIcon = {
                     if (esProveedorExterno) {
-                        Icon(Icons.Default.Lock, contentDescription = "No editable",
-                            tint = MaterialTheme.colorScheme.outline)
+                        Icon(
+                            Icons.Default.Lock, contentDescription = "No editable",
+                            tint = MaterialTheme.colorScheme.outline
+                        )
                     }
                 },
                 readOnly = esProveedorExterno,
@@ -209,7 +216,7 @@ fun RegistroParticipante(
             if (!esProveedorExterno) {
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = { password = it.filterNot { char -> char.isWhitespace() } },
                     label = { Text("Contraseña") },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                     trailingIcon = {
@@ -235,19 +242,53 @@ fun RegistroParticipante(
                 onClick = {
                     when {
                         // Validaciones comunes
-                        nombre.isBlank() -> Toast.makeText(context, "Introduce el nombre", Toast.LENGTH_SHORT).show()
-                        apellidos.isBlank() -> Toast.makeText(context, "Introduce los apellidos", Toast.LENGTH_SHORT).show()
-                        emailEduca.isBlank() -> Toast.makeText(context, "Introduce el email", Toast.LENGTH_SHORT).show()
-                        !emailPattern.matches(emailEduca) -> Toast.makeText(context, "Formato de email inválido", Toast.LENGTH_SHORT).show()
-                        centro.isBlank() -> Toast.makeText(context, "Introduce el centro", Toast.LENGTH_SHORT).show()
-                        codigoCentro.isBlank() -> Toast.makeText(context, "Introduce el código de centro", Toast.LENGTH_SHORT).show()
+                        nombre.isBlank() -> Toast.makeText(
+                            context,
+                            "Introduce el nombre",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        apellidos.isBlank() -> Toast.makeText(
+                            context,
+                            "Introduce los apellidos",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        emailEduca.isBlank() -> Toast.makeText(
+                            context,
+                            "Introduce el email",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        !emailPattern.matches(emailEduca) -> Toast.makeText(
+                            context,
+                            "Formato de email inválido",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        centro.isBlank() -> Toast.makeText(
+                            context,
+                            "Introduce el centro",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        codigoCentro.isBlank() -> Toast.makeText(
+                            context,
+                            "Introduce el código de centro",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
                         // Estas dos validaciones solo se aplican a usuarios registrados en la app
                         !esProveedorExterno && password.length < 10 -> Toast.makeText(
-                            context, "La contraseña debe tener al menos 10 caracteres", Toast.LENGTH_SHORT
+                            context,
+                            "La contraseña debe tener al menos 10 caracteres",
+                            Toast.LENGTH_SHORT
                         ).show()
+
                         !esProveedorExterno && !password.any { !it.isLetterOrDigit() } -> Toast.makeText(
-                            context, "La contraseña debe contener al menos un carácter especial", Toast.LENGTH_SHORT
+                            context,
+                            "La contraseña debe contener al menos un carácter especial",
+                            Toast.LENGTH_SHORT
                         ).show()
 
                         else -> {
@@ -298,24 +339,34 @@ fun RegistroParticipante(
                                             scope = scope,
                                             onSuccess = {
                                                 isLoading = false
-                                                Toast.makeText(context, "Cuenta creada correctamente", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Cuenta creada correctamente",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                                 auth.signOut()
                                                 notificationHandler.enviarNotificacionSimple(
-                                                    "Registro exitoso", "¡Bienvenido a PonenciApp, $nombre!"
+                                                    "Registro exitoso",
+                                                    "¡Bienvenido a PonenciApp, $nombre!"
                                                 )
                                                 navController.popBackStack()
                                             },
                                             onError = { msg ->
                                                 isLoading = false
                                                 auth.currentUser?.delete()
-                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT)
+                                                    .show()
                                             },
                                             fotoUrl = fotoUrl
                                         )
                                     }
                                     .addOnFailureListener { e ->
                                         isLoading = false
-                                        Toast.makeText(context, "Error creando cuenta: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Error creando cuenta: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                             }
                         }
@@ -329,7 +380,10 @@ fun RegistroParticipante(
                 if (isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text(if (esProveedorExterno) "Completar registro" else "Registrarse", fontSize = 16.sp)
+                    Text(
+                        if (esProveedorExterno) "Completar registro" else "Registrarse",
+                        fontSize = 16.sp
+                    )
                 }
             }
         }
