@@ -299,7 +299,7 @@ fun MisEventos(navController: NavController) {
                                         eventoEditando = evento
                                         showDialogCrear = true
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Editar")
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                                     }
                                     IconButton(onClick = {
                                         eventoEditando = evento

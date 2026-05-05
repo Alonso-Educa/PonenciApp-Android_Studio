@@ -809,11 +809,11 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                     ) {
                         Icon(Icons.Default.Chat, contentDescription = "Chatbot")
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Nuestro chatbot de soporte")
+                        Text("Nuestro asistente virtual para soporte")
                         Spacer(modifier = Modifier.weight(1f))
                     }
 
-                    // Abrir la página de ayuda (aún no está hecha)
+                    // Abrir la página de ayuda
                     TextButton(
                         onClick = { context.startActivity(intent) }) {
                         Icon(Icons.AutoMirrored.Outlined.Help, contentDescription = "Ayuda")

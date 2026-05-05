@@ -88,7 +88,7 @@ fun RegistroParticipante(
                     // Si viene de OAuth ya tiene cuenta creada en Auth y necesita completarla
                     if (!esProveedorExterno) {
                         IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                         }
                     }
                 },

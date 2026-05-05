@@ -41,7 +41,7 @@ fun BottomBarOrganizador(navController: NavController, rutaActual: String) {
 @Composable
 fun BottomBarUnirseEvento(navController: NavController, rutaActual: String) {
     val items = listOf(
-        BottomNavItem("Unirse Evento", Icons.Default.QrCode, AppScreens.UnirseEvento.route),
+        BottomNavItem("Unirse a Evento", Icons.Default.QrCode, AppScreens.UnirseEvento.route),
         BottomNavItem("Ajustes", Icons.Default.Settings, AppScreens.Ajustes.route)
     )
     BottomBarComun(navController, rutaActual, items)
@@ -71,7 +71,7 @@ private fun BottomBarComun(
                 label = { Text(item.label) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onTertiary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.tertiary,
                     indicatorColor = MaterialTheme.colorScheme.tertiary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
