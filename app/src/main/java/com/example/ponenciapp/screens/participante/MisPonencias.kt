@@ -3,6 +3,7 @@ package com.example.ponenciapp.screens.participante
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
@@ -175,9 +178,11 @@ fun MisPonencias(navController: NavController) {
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    participante?.let { IconoUsuario(
-                        usuario = it
-                    ) }
+                    participante?.let {
+                        IconoUsuario(
+                            usuario = it
+                        )
+                    }
                 }
             )
         },
@@ -219,9 +224,25 @@ fun MisPonencias(navController: NavController) {
         }
 
         // Sino, muestra la lista de ponencias
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                "Información del evento",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Text(
+                "Aquí encontrarás toda la información acerca del evento al que te has unido. Revisa su tarjeta de presentación o consulta la lista de ponencias a las que asistirás.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
             // Tarjeta con la información del evento
             evento?.let {
                 Card(
@@ -239,31 +260,23 @@ fun MisPonencias(navController: NavController) {
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.CalendarMonth,
                                 contentDescription = "Fecha",
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                it.fecha, style = MaterialTheme.typography.bodyMedium
-                            )
+                            Text(it.fecha, style = MaterialTheme.typography.bodyMedium)
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.LocationOn,
                                 contentDescription = "Lugar",
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                it.lugar, style = MaterialTheme.typography.bodyMedium
-                            )
+                            Text(it.lugar, style = MaterialTheme.typography.bodyMedium)
                         }
                         if (it.descripcion.isNotBlank()) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -278,14 +291,27 @@ fun MisPonencias(navController: NavController) {
             }
 
             // Lista de ponencias
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+            Text(
+                "Ponencias",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Text(
+                "Explora las ponencias del evento y consulta los detalles de cada una.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Column(
+                modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(listaPonencias) { ponencia ->
+                listaPonencias.forEach { ponencia ->
                     TarjetaPonencia(
-                        ponencia = ponencia, onClick = {
+                        ponencia = ponencia,
+                        onClick = {
                             navController.navigate(
                                 AppScreens.DetallePonenciaParticipante.createRoute(ponencia.idPonencia)
                             )

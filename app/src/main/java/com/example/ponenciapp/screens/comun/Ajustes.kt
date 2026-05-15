@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.School
@@ -148,6 +149,7 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
     var showDialogCambiarEmail by remember { mutableStateOf(false) }
     var showDialogBorrarCuenta by remember { mutableStateOf(false) }
     var showDialogCerrarSesion by remember { mutableStateOf(false) }
+    var showDialogSalirEvento by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
@@ -831,11 +833,31 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         fontWeight = FontWeight.Bold
                     )
 
-                    Text(
-                        "Puedes eliminar permanentemente tu cuenta y todos tus datos.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (participante?.idEvento.isNullOrEmpty()) {
+                        Text(
+                            "Puedes eliminar permanentemente tu cuenta y todos tus datos.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            "Puedes salirte del evento o eliminar permanentemente tu cuenta y todos tus datos.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Salir del evento (solo participantes con evento activo)
+                    if (participante?.rol == "participante" && !participante?.idEvento.isNullOrEmpty()) {
+                        OutlinedButton(
+                            onClick = { showDialogSalirEvento = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Event, contentDescription = "Salir del evento")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Salir del evento")
+                        }
+                    }
 
                     // Borrar cuenta
                     OutlinedButton(
@@ -921,7 +943,9 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
                         OutlinedTextField(
                             value = nuevoEmail,
-                            onValueChange = { nuevoEmail = it.filterNot { char -> char.isWhitespace() } },
+                            onValueChange = {
+                                nuevoEmail = it.filterNot { char -> char.isWhitespace() }
+                            },
                             label = { Text("Nuevo correo") },
                             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                             singleLine = true,
@@ -929,7 +953,9 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         )
                         OutlinedTextField(
                             value = passwordActual,
-                            onValueChange = { passwordActual = it.filterNot { char -> char.isWhitespace() } },
+                            onValueChange = {
+                                passwordActual = it.filterNot { char -> char.isWhitespace() }
+                            },
                             label = { Text("Contraseña") },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             trailingIcon = {
@@ -1184,7 +1210,9 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
                         if (tienePassword) {
                             OutlinedTextField(
                                 value = password,
-                                onValueChange = { password = it.filterNot { char -> char.isWhitespace() } },
+                                onValueChange = {
+                                    password = it.filterNot { char -> char.isWhitespace() }
+                                },
                                 label = { Text("Contraseña") },
                                 singleLine = true,
                                 visualTransformation = PasswordVisualTransformation(),
@@ -1224,45 +1252,123 @@ fun Ajustes(navController: NavController, themeViewModel: ThemeViewModel) {
 
         if (showDialogCerrarSesion) {
 
-            AlertDialog(
-                onDismissRequest = { showDialogCerrarSesion = false },
-                title = { Text("Cerrar sesión") },
-                text = { Text("¿Estás seguro de que quieres cerrar sesión?") },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            Firebase.auth.signOut()
+            Dialog(onDismissRequest = { showDialogCerrarSesion = false }) {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Cerrar sesión",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                            navController.navigate(AppScreens.Login.route) {
-                                popUpTo(0) { inclusive = true }
+                        Text(
+                            "¿Estás seguro de que quieres cerrar sesión?",
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                onClick = { showDialogCerrarSesion = false }
+                            ) {
+                                Text("Cancelar")
                             }
 
-                            showDialogCerrarSesion = false
+                            Button(
+                                onClick = {
+                                    Firebase.auth.signOut()
 
-                            Toast.makeText(
-                                context,
-                                "Sesión cerrada correctamente",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Cerrar sesión")
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showDialogCerrarSesion = false }
-                    ) {
-                        Text("Cancelar")
+                                    navController.navigate(AppScreens.Login.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+
+                                    showDialogCerrarSesion = false
+
+                                    Toast.makeText(
+                                        context,
+                                        "Sesión cerrada correctamente",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Text("Cerrar sesión")
+                            }
+                        }
                     }
                 }
-            )
+            }
+        }
+
+        if (showDialogSalirEvento) {
+            Dialog(onDismissRequest = { showDialogSalirEvento = false }) {
+                Card(
+                    shape = MaterialTheme.shapes.large,
+                    elevation = CardDefaults.cardElevation(8.dp),
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Salir del evento",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Dejarás de tener acceso al evento y tendrás que introducir un código para unirte a uno nuevo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { showDialogSalirEvento = false }) {
+                                Text("Cancelar")
+                            }
+                            Button(
+                                onClick = {
+                                    // Limpia idEvento en Room
+                                    scope.launch {
+                                        participante?.let { p ->
+                                            usuarioDao.actualizar(p.copy(idEvento = ""))
+                                        }
+                                    }
+                                    // Limpia idEvento en Firestore
+                                    Firebase.firestore.collection("usuarios")
+                                        .document(uid)
+                                        .update("idEvento", "")
+
+                                    showDialogSalirEvento = false
+
+                                    // Navega a UnirseEvento limpiando la pila
+                                    navController.navigate(AppScreens.UnirseEvento.route) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            ) {
+                                Text("Salir")
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun DialogEditarUsuario(
@@ -1285,7 +1391,11 @@ fun DialogEditarUsuario(
     var nombre by remember { mutableStateOf(participanteEditando?.nombre ?: "") }
     var apellidos by remember { mutableStateOf(participanteEditando?.apellidos ?: "") }
     var centro by remember { mutableStateOf(participanteEditando?.centro ?: "") }
-    var codigoCentro by remember { mutableStateOf(participanteEditando?.codigoCentro ?: "") }
+    var codigoCentro by remember {
+        mutableStateOf(
+            participanteEditando?.codigoCentro ?: ""
+        )
+    }
     var isLoading by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1359,7 +1469,9 @@ fun DialogEditarUsuario(
                         onClick = {
                             when {
                                 nombre.isBlank() -> Toast.makeText(
-                                    context, "El nombre no puede estar vacío", Toast.LENGTH_SHORT
+                                    context,
+                                    "El nombre no puede estar vacío",
+                                    Toast.LENGTH_SHORT
                                 ).show()
 
                                 apellidos.isBlank() -> Toast.makeText(
@@ -1390,24 +1502,29 @@ fun DialogEditarUsuario(
                                         "emailEduca" to participanteEditando?.emailEduca,
                                         "centro" to centro,
                                         "codigoCentro" to codigoCentro,
-                                        "rol" to (participanteEditando?.rol ?: "participante"),
+                                        "rol" to (participanteEditando?.rol
+                                            ?: "participante"),
                                         "fechaRegistro" to participanteEditando?.fechaRegistro,
                                         "idEvento" to participanteEditando?.idEvento
                                     )
-                                    firestore.collection("usuarios").document(idParticipante)
+                                    firestore.collection("usuarios")
+                                        .document(idParticipante)
                                         .set(data)
                                         .addOnSuccessListener {
                                             val participanteNuevo = UsuarioData(
                                                 idUsuario = idParticipante,
                                                 nombre = nombre,
                                                 apellidos = apellidos,
-                                                emailEduca = participanteEditando?.emailEduca ?: "",
+                                                emailEduca = participanteEditando?.emailEduca
+                                                    ?: "",
                                                 centro = centro,
                                                 codigoCentro = codigoCentro,
-                                                rol = participanteEditando?.rol ?: "participante",
+                                                rol = participanteEditando?.rol
+                                                    ?: "participante",
                                                 fechaRegistro = participanteEditando?.fechaRegistro
                                                     ?: formatearFechaHora(),
-                                                idEvento = participanteEditando?.idEvento ?: ""
+                                                idEvento = participanteEditando?.idEvento
+                                                    ?: ""
                                             )
                                             scope.launch {
                                                 usuarioDao.insertar(participanteNuevo)
@@ -1422,7 +1539,9 @@ fun DialogEditarUsuario(
                                         }.addOnFailureListener { e ->
                                             isLoading = false
                                             Toast.makeText(
-                                                context, "Error: ${e.message}", Toast.LENGTH_SHORT
+                                                context,
+                                                "Error: ${e.message}",
+                                                Toast.LENGTH_SHORT
                                             ).show()
                                         }
                                 }
@@ -1464,7 +1583,9 @@ fun DialogoVincularProveedor(
                 )
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it.filterNot { char -> char.isWhitespace() } },
+                    onValueChange = {
+                        password = it.filterNot { char -> char.isWhitespace() }
+                    },
                     label = { Text("Contraseña") },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                     singleLine = true,
@@ -1509,7 +1630,11 @@ fun reautenticarYVincular(
         ?.addOnSuccessListener {
             auth.currentUser?.linkWithCredential(credentialToLink)
                 ?.addOnSuccessListener {
-                    Toast.makeText(context, "Cuenta vinculada correctamente", Toast.LENGTH_SHORT)
+                    Toast.makeText(
+                        context,
+                        "Cuenta vinculada correctamente",
+                        Toast.LENGTH_SHORT
+                    )
                         .show()
                     onExito()
                 }

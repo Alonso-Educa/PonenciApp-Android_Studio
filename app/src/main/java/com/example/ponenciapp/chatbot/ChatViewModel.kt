@@ -27,7 +27,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
-    // ─── Companion object: constantes de configuración ───────────────────────
+    // Companion object: constantes de configuración
     companion object {
         private const val MAX_HISTORIAL = 20
 
@@ -62,7 +62,6 @@ INSTRUCCIONES DE COMPORTAMIENTO:
 - No inventes funcionalidades que no existen.
 """
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     private val notificationHandler = NotificationHandler(application.applicationContext)
     var usuarioEnChat by mutableStateOf(false)
@@ -177,12 +176,12 @@ INSTRUCCIONES DE COMPORTAMIENTO:
 
                 if (!isActive) return@launch
 
-                // ── Contexto dinámico del usuario ────────────────────────────
+                // Contexto dinámico del usuario
                 // Se pueden enviar más cosas acerca del usuario para mejorar su experiencia TODO()
                 val contextoUsuario = "El usuario actual tiene el rol de $rolUsuario en la app."
                 val systemConContexto = SYSTEM_PROMPT.trimIndent() + "\n\n$contextoUsuario"
 
-                // ── Limitar historial a los últimos MAX_HISTORIAL mensajes ───
+                // Limitar historial a los últimos mensajes
                 val historialLimitado = mensajes
                     .takeLast(MAX_HISTORIAL)
                     .map { MensajeApi(it.rol, it.contenido) }
@@ -287,7 +286,7 @@ INSTRUCCIONES DE COMPORTAMIENTO:
     }
 
     private suspend fun insertarBienvenida() {
-        // ── Mensaje de bienvenida actualizado ────────────────────────────────
+        // Mensaje de bienvenida
         val contenido = "¡Hola! Soy el asistente de PonenciApp. Puedo ayudarte con cualquier duda sobre la app: cómo crear eventos, unirte como participante, hacer check-in con QR, valorar ponencias y mucho más. ¿En qué puedo ayudarte?"
         val fecha = System.currentTimeMillis()
 

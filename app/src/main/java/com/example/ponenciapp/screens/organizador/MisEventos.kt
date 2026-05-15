@@ -222,6 +222,23 @@ fun MisEventos(navController: NavController) {
             } else {
                 // Si hay eventos, mostrarlos en una lista
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item{
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    item {
+                        Text(
+                            "Mis eventos",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        Text(
+                            "Aquí puedes gestionar tus eventos. Toca una tarjeta para ver sus detalles, gestionar ponencias y más. Usa los iconos para editar o eliminar rápidamente.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
                     }

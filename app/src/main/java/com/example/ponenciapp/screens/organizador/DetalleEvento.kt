@@ -124,21 +124,21 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
         organizador = usuarioDao.getParticipantePorId(uid)
         // Carga el evento desde firebase
         firestore.collection("eventos").document(idEvento).get().addOnSuccessListener { doc ->
-                evento = EventoData(
-                    idEvento = doc.id,
-                    nombre = doc.getString("nombre") ?: "",
-                    fecha = doc.getString("fecha") ?: "",
-                    lugar = doc.getString("lugar") ?: "",
-                    descripcion = doc.getString("descripcion") ?: "",
-                    codigoEvento = doc.getString("codigoEvento") ?: "",
-                    idOrganizador = doc.getString("idOrganizador") ?: ""
-                )
-                scope.launch { evento?.let { eventoDao.insertar(it) } }
-            }.addOnFailureListener {
-                scope.launch {
-                    evento = eventoDao.getEventoPorId(idEvento)
-                }
+            evento = EventoData(
+                idEvento = doc.id,
+                nombre = doc.getString("nombre") ?: "",
+                fecha = doc.getString("fecha") ?: "",
+                lugar = doc.getString("lugar") ?: "",
+                descripcion = doc.getString("descripcion") ?: "",
+                codigoEvento = doc.getString("codigoEvento") ?: "",
+                idOrganizador = doc.getString("idOrganizador") ?: ""
+            )
+            scope.launch { evento?.let { eventoDao.insertar(it) } }
+        }.addOnFailureListener {
+            scope.launch {
+                evento = eventoDao.getEventoPorId(idEvento)
             }
+        }
 
         // Carga sus ponencias desde firebase
         firestore.collection("ponencias").whereEqualTo("idEvento", idEvento).get()
@@ -180,32 +180,34 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
         topBar = {
             TopAppBar(
                 title = {
-                Text(
-                    text = evento?.nombre ?: "Información del evento",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp
-                )
-            }, colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = Color.White
-            ), navigationIcon = {
-                // Botón para volver atrás
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Atrás",
-                        tint = Color.White
+                    Text(
+                        text = evento?.nombre ?: "Información del evento",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
                     )
-                }
-            }, actions = {
-                // Icono de usuario
-                organizador?.let { IconoUsuario(
-                    usuario = it
-                ) }
-            })
+                }, colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White
+                ), navigationIcon = {
+                    // Botón para volver atrás
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Atrás",
+                            tint = Color.White
+                        )
+                    }
+                }, actions = {
+                    // Icono de usuario
+                    organizador?.let {
+                        IconoUsuario(
+                            usuario = it
+                        )
+                    }
+                })
         },
         // El fab se usa para añadir ponencias
         floatingActionButton = {
@@ -234,10 +236,12 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
         }
 
         // Muestra la información del evento
+        // Muestra la información del evento
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
         ) {
             // Datos del evento
             evento?.let {
@@ -349,13 +353,19 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
+            Text(
+                "Toca una ponencia para acceder a su información y ver el código QR de asistencia.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
 
             // Si no hay ponencias, muestra un mensaje
             if (listaPonencias.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom=32.dp),
+                        .fillMaxWidth()
+                        .padding(vertical = 64.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -380,8 +390,10 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 }
             } else {
                 // Si hay ponencias, muestra la lista
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(listaPonencias) { ponencia ->
+                Column(
+                    modifier = Modifier.padding(bottom = 80.dp) // espacio para el FAB
+                ) {
+                    listaPonencias.forEach { ponencia ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -485,12 +497,16 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 ponenciaEditando = null
             },
             onGuardado = { ponenciaNueva ->
-                listaPonencias = if (ponenciaEditando == null) {
+                val listaActualizada = if (ponenciaEditando == null) {
                     listaPonencias + ponenciaNueva
                 } else {
                     listaPonencias.map {
                         if (it.idPonencia == ponenciaNueva.idPonencia) ponenciaNueva else it
                     }
+                }
+                // Recalcula el orden según horaInicio
+                scope.launch {
+                    listaPonencias = recalcularOrdenes(listaActualizada, firestore, ponenciaDao)
                 }
                 showDialogPonencia = false
                 ponenciaEditando = null
@@ -501,9 +517,9 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
     if (showDialogEliminar && ponenciaEditando != null) {
         AlertDialog(
             onDismissRequest = {
-            showDialogEliminar = false
-            ponenciaEditando = null
-        },
+                showDialogEliminar = false
+                ponenciaEditando = null
+            },
             icon = { Icon(Icons.Default.Warning, contentDescription = null) },
             title = { Text("Eliminar ponencia") },
             text = { Text("¿Deseas eliminar \"${ponenciaEditando!!.titulo}\"?") },
@@ -511,9 +527,15 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 TextButton(onClick = {
                     scope.launch {
                         val id = ponenciaEditando!!.idPonencia
+
+                        // Elimina la ponencia
                         firestore.collection("ponencias").document(id).delete()
                         ponenciaDao.eliminarPonencia(id)
-                        listaPonencias = listaPonencias.filter { it.idPonencia != id }
+
+                        // Recalcula el orden del resto según horaInicio
+                        val listaFiltrada = listaPonencias.filter { it.idPonencia != id }
+                        listaPonencias = recalcularOrdenes(listaFiltrada, firestore, ponenciaDao)
+
                         showDialogEliminar = false
                         ponenciaEditando = null
                         Toast.makeText(context, "Ponencia eliminada", Toast.LENGTH_SHORT).show()
@@ -538,6 +560,35 @@ fun DetalleEvento(navController: NavController, idEvento: String) {
                 onDismiss = { showQREvento = false })
         }
     }
+}
+
+// Recalcula el orden de todas las ponencias según su hora de inicio
+// Las ponencias con la misma hora de inicio comparten número de orden
+private suspend fun recalcularOrdenes(
+    lista: List<PonenciaData>,
+    firestore: FirebaseFirestore,
+    ponenciaDao: com.example.ponenciapp.data.bbdd.dao.PonenciaDao
+): List<PonenciaData> {
+    val ordenada = lista.sortedBy { it.horaInicio }
+    var ordenActual = 1
+    var horaAnterior: String? = null
+
+    val resultado = ordenada.mapIndexed { index, ponencia ->
+        if (index > 0 && ponencia.horaInicio != horaAnterior) ordenActual++
+        horaAnterior = ponencia.horaInicio
+        ponencia.copy(orden = ordenActual)
+    }
+
+    // Solo escribe en Firestore y Room las que hayan cambiado de orden
+    resultado.forEach { p ->
+        val ordenAnterior = lista.find { it.idPonencia == p.idPonencia }?.orden
+        if (ordenAnterior != p.orden) {
+            firestore.collection("ponencias").document(p.idPonencia).update("orden", p.orden)
+            ponenciaDao.insertar(p)
+        }
+    }
+
+    return resultado
 }
 
 @Composable
