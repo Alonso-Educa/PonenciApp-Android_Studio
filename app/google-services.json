@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "782692490355-io2fqrdpod9bl6r27ehll75o3ns5v67r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ponenciapp",
+            "certificate_hash": "ddb0ab08f70df161be040a43656403c45350ba5e"
+          }
+        },
+        {
           "client_id": "782692490355-e7tm8sbdejbksdfkr21f4h02astdu4oo.apps.googleusercontent.com",
           "client_type": 3
         }
