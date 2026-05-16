@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "782692490355-ofam10jpa5auvtd1or5t19bats8mv4dv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ponenciapp",
+            "certificate_hash": "fde92d548f7210ae87a6a0853e634d7a762b9c12"
+          }
+        },
+        {
           "client_id": "782692490355-e7tm8sbdejbksdfkr21f4h02astdu4oo.apps.googleusercontent.com",
           "client_type": 3
         }

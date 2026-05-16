@@ -1,8 +1,11 @@
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
 
 val localProperties = Properties()
-localProperties.load(FileInputStream(rootProject.file("local.properties")))
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -28,6 +31,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("${rootProject.projectDir}/release.jks")
+            storePassword = localProperties["KEYSTORE_PASSWORD"] as? String ?: ""
+            keyAlias = localProperties["KEY_ALIAS"] as? String ?: ""
+            keyPassword = localProperties["KEY_PASSWORD"] as? String ?: ""
+        }
+    }
+
     buildTypes {
         debug {
             // Api key de groq
@@ -39,6 +51,9 @@ android {
             buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties["CLOUDINARY_API_SECRET"]}\"")
         }
         release {
+            // Firma para publicar la versión release
+            signingConfig = signingConfigs.getByName("release")
+
             // Api key de groq
             buildConfigField("String", "GROQ_API_KEY", "\"${localProperties["GROQ_API_KEY"]}\"")
 
